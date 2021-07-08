@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using OSIsoft.AF;
+using System.Threading;
+using OSIsoft.AF.Asset;
 using OSIsoft.AF.Data;
 using OSIsoft.AF.PI;
 
@@ -30,15 +28,17 @@ namespace EventTriggeredCalc
             
             try
             {
+                // look for the output tag
                 outputTag = PIPoint.FindPIPoint(myServer, outputTagName);
             }
             catch (PIPointInvalidException)
             {
+                // create it if it couldn't find it
                 outputTag = myServer.CreatePIPoint(outputTagName);
-                outputTag.SetAttribute(PICommonPointAttributes.PointType, PIPointType.Float32);
+                outputTag.SetAttribute(PICommonPointAttributes.PointType, PIPointType.Float64);
             }
 
-            // List to hold the PIPoint objects that we will sign up for updates on
+            // List of input tags whose updates should trigger a calculation
             var nameList = new List<string>
             {
                 inputTagName
@@ -68,21 +68,76 @@ namespace EventTriggeredCalc
                             if (mySnapshotEvent.Action == AFDataPipeAction.Add ||
                                 mySnapshotEvent.Action == AFDataPipeAction.Update)
                             {
-                                // Display the new value
+                                // Trigger the calculation against this snapshot event
                                 PerformCalculation(mySnapshotEvent, outputTag);
                             }
                         }
                     }
 
-                    // Wait for the next cycle
-                    System.Threading.Thread.Sleep(pauseMs);
+                    // Wait for the next cycle - pausing decreases the number of checks performed for new updates, reducing processing requirements
+                    Thread.Sleep(pauseMs);
                 }
             }
         }
 
         private static void PerformCalculation(AFDataPipeEvent mySnapshotEvent, PIPoint output)
         {
-            Console.WriteLine($"Calculation performed on {mySnapshotEvent.Value.PIPoint.Name} with value of {mySnapshotEvent.Value.Value} and time of {mySnapshotEvent.Value.Timestamp.LocalTime}, writing to {output.Name}");
+            // Configuration
+            var numValues = 100;  // number of values to find the average of
+            var numStDevs = 1.75; // number of standard deviations of variance to allow
+            
+            // Obtain the recent values from the trigger timestamp
+            var afvals = mySnapshotEvent.Value.PIPoint.RecordedValuesByCount(mySnapshotEvent.Value.Timestamp, numValues, false, AFBoundaryType.Interpolated, null, false);
+
+            // Remove bad values
+            var badItems = new List<AFValue>();
+            foreach (var afval in afvals)
+                if (!afval.IsGood)
+                    badItems.Add(afval);
+            
+            foreach (var item in badItems)
+                afvals.Remove(item);
+
+            // Loop until no new values were eliminated for being outside of the boundaries
+            while (true)
+            {
+                // Calculate the mean
+                var total = 0.0;
+                foreach (var afval in afvals)
+                    total += afval.ValueAsDouble();
+
+                var avg = total / (double)afvals.Count;
+
+                // Calculate the st dev
+                var totalSquareVariance = 0.0;
+                foreach (var afval in afvals)
+                    totalSquareVariance += Math.Pow(afval.ValueAsDouble() - avg, 2);
+
+                var avgSqDev = totalSquareVariance / (double)afvals.Count;
+                var stdev = Math.Sqrt(avgSqDev);
+
+                // Determine the values outside of the boundaries
+                var cutoff = stdev * numStDevs;
+                var itemsToRemove = new List<AFValue>();
+
+                foreach (var afval in afvals)
+                    if (Math.Abs(afval.ValueAsDouble() - avg) > cutoff)
+                        itemsToRemove.Add(afval);
+
+                // If there are items to remove, remove them and loop again
+                if (itemsToRemove.Count > 0)
+                {
+                    foreach (var item in itemsToRemove)
+                        afvals.Remove(item);
+                }
+                // If not, write the average to the output tag and break the loop
+                else
+                {
+                    output.UpdateValue(new AFValue(avg, mySnapshotEvent.Value.Timestamp), AFUpdateOption.Insert);
+                    break;
+                }
+
+            }            
         }
     }
 }
