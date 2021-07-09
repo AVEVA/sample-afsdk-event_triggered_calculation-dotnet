@@ -131,7 +131,6 @@ namespace EventTriggeredCalc
                     output.UpdateValue(new AFValue(avg, mySnapshotEvent.Value.Timestamp), AFUpdateOption.Insert);
                     break;
                 }
-
             }            
         }
     }
