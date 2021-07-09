@@ -39,15 +39,10 @@ namespace EventTriggeredCalc
             }
 
             // List of input tags whose updates should trigger a calculation
-            var nameList = new List<string>
-            {
-                inputTagName
-            };
-
-            var myList = PIPoint.FindPIPoints(myServer, nameList);
+            var myList = PIPoint.FindPIPoints(myServer, new List<String> { inputTagName });
 
             // Create a new data pipe for snapshot events
-            using (PIDataPipe myDataPipe = new PIDataPipe(AFDataPipeType.Snapshot))
+            using (var myDataPipe = new PIDataPipe(AFDataPipeType.Snapshot))
             {
                 // Sign up for updates on the points
                 myDataPipe.AddSignups(myList);
