@@ -9,7 +9,12 @@ namespace EventTriggeredCalc
 {
     public static class Program
     {
-        public static void Main(string[] args)
+        public static void Main()
+        {
+            var success = MainLoop(false);
+        }
+
+        public static bool MainLoop(bool test = false)
         {
             #region configuration
 
@@ -18,6 +23,12 @@ namespace EventTriggeredCalc
             var pauseMs = 1000; // time to pause each loop, in ms
             var maxEventsPerPeriod = 10;
 
+            // For unit testing
+            var testStart = DateTime.Now;
+            var maxTestSeconds = 400;
+            var numTestLoops = 0;
+            var goalNumTestLoops = 2;
+            
             #endregion // configuration
 
             // Get default PI Data Archive
@@ -65,9 +76,31 @@ namespace EventTriggeredCalc
                             {
                                 // Trigger the calculation against this snapshot event
                                 PerformCalculation(mySnapshotEvent, outputTag);
+
+                                if (test)
+                                {
+                                    ++numTestLoops;
+                                }
                             }
                         }
                     }
+
+                    // Handle the test results
+                    if (test)
+                    {
+                        // If the test has loop enough times, return a successful test
+                        if (numTestLoops >= goalNumTestLoops)
+                        {
+                            return true;
+                        }
+
+                        // If the test has taken too long, return a failed test
+                        if ((DateTime.Now - testStart).TotalSeconds >= maxTestSeconds)
+                        {
+                            return false;
+                        }
+                    }
+                    
 
                     // Wait for the next cycle - pausing decreases the number of checks performed for new updates, reducing processing requirements
                     Thread.Sleep(pauseMs);
