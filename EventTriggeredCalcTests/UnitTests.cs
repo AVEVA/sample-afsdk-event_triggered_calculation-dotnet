@@ -1,14 +1,13 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Xunit;
 
 namespace EventTriggeredCalcTests
 {
-    [TestClass]
     public class UnitTests
     {
-        [TestMethod]
+        [Fact]
         public void EventTriggeredCalcTest()
         {
-            Assert.IsTrue(EventTriggeredCalc.Program.MainLoop(true));
+            Assert.True(EventTriggeredCalc.Program.MainLoop(true));
         }
     }
 }
