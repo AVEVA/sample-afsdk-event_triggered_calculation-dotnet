@@ -132,14 +132,23 @@ namespace EventTriggeredCalc
                 // Calculate the mean
                 var total = 0.0;
                 foreach (var afval in afvals)
+                {
                     total += afval.ValueAsDouble();
+                }
 
-                var avg = total / (double)afvals.Count;
+                var avg = 0.0;
+
+                if (total != 0.0) // prevents division by zero
+                {
+                    avg = total / afvals.Count;
+                }
 
                 // Calculate the st dev
                 var totalSquareVariance = 0.0;
                 foreach (var afval in afvals)
+                {
                     totalSquareVariance += Math.Pow(afval.ValueAsDouble() - avg, 2);
+                }
 
                 var avgSqDev = totalSquareVariance / (double)afvals.Count;
                 var stdev = Math.Sqrt(avgSqDev);
