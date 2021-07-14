@@ -28,11 +28,17 @@ namespace EventTriggeredCalc
             var maxTestSeconds = 400;
             var numTestLoops = 0;
             var goalNumTestLoops = 2;
-            
+
             #endregion // configuration
 
-            // Get default PI Data Archive
+            // Get PI Data Archive object
+
+            // Default server
             var myServer = PIServers.GetPIServers().DefaultPIServer;
+
+            // Named server
+            // var dataArchiveName = "PISRV01";
+            // var myServer = PIServers.GetPIServers()[dataArchiveName];
 
             // Get or create the output PI Point
             PIPoint outputTag;
@@ -118,13 +124,7 @@ namespace EventTriggeredCalc
             var afvals = mySnapshotEvent.Value.PIPoint.RecordedValuesByCount(mySnapshotEvent.Value.Timestamp, numValues, false, AFBoundaryType.Interpolated, null, false);
 
             // Remove bad values
-            var badItems = new List<AFValue>();
-            foreach (var afval in afvals)
-                if (!afval.IsGood)
-                    badItems.Add(afval);
-            
-            foreach (var item in badItems)
-                afvals.Remove(item);
+            afvals.RemoveAll(a => !a.IsGood);
 
             // Loop until no new values were eliminated for being outside of the boundaries
             while (true)
@@ -144,22 +144,14 @@ namespace EventTriggeredCalc
                 var avgSqDev = totalSquareVariance / (double)afvals.Count;
                 var stdev = Math.Sqrt(avgSqDev);
 
-                // Determine the values outside of the boundaries
+                // Determine the values outside of the boundaries, and remove them
                 var cutoff = stdev * numStDevs;
-                var itemsToRemove = new List<AFValue>();
+                var startingCount = afvals.Count;
 
-                foreach (var afval in afvals)
-                    if (Math.Abs(afval.ValueAsDouble() - avg) > cutoff)
-                        itemsToRemove.Add(afval);
+                afvals.RemoveAll(a => Math.Abs(a.ValueAsDouble() - avg) > cutoff);
 
-                // If there are items to remove, remove them and loop again
-                if (itemsToRemove.Count > 0)
-                {
-                    foreach (var item in itemsToRemove)
-                        afvals.Remove(item);
-                }
-                // If not, write the average to the output tag and break the loop
-                else
+                // If no items were removed, output the average and break the loop
+                if (afvals.Count == startingCount)
                 {
                     output.UpdateValue(new AFValue(avg, mySnapshotEvent.Value.Timestamp), AFUpdateOption.Insert);
                     break;
