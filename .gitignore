@@ -389,3 +389,4 @@ FodyWeavers.xsd
 
 ## Credential Config Files
 product-readiness.*
+appsettings.json
