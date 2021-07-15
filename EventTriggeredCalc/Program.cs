@@ -129,38 +129,46 @@ namespace EventTriggeredCalc
             // Loop until no new values were eliminated for being outside of the boundaries
             while (true)
             {
-                // Calculate the mean
-                var total = 0.0;
-                foreach (var afval in afvals)
-                {
-                    total += afval.ValueAsDouble();
-                }
 
                 var avg = 0.0;
 
-                if (total != 0.0) // prevents division by zero
+                // Don't loop if all values have been removed
+                if (afvals.Count > 0)
                 {
+
+                    // Calculate the mean
+                    var total = 0.0;
+                    foreach (var afval in afvals)
+                    {
+                        total += afval.ValueAsDouble();
+                    }
+
                     avg = total / afvals.Count;
+
+                    // Calculate the st dev
+                    var totalSquareVariance = 0.0;
+                    foreach (var afval in afvals)
+                    {
+                        totalSquareVariance += Math.Pow(afval.ValueAsDouble() - avg, 2);
+                    }
+
+                    var avgSqDev = totalSquareVariance / (double)afvals.Count;
+                    var stdev = Math.Sqrt(avgSqDev);
+
+                    // Determine the values outside of the boundaries, and remove them
+                    var cutoff = stdev * numStDevs;
+                    var startingCount = afvals.Count;
+
+                    afvals.RemoveAll(a => Math.Abs(a.ValueAsDouble() - avg) > cutoff);
+
+                    // If no items were removed, output the average and break the loop
+                    if (afvals.Count == startingCount)
+                    {
+                        output.UpdateValue(new AFValue(avg, mySnapshotEvent.Value.Timestamp), AFUpdateOption.Insert);
+                        break;
+                    }
                 }
-
-                // Calculate the st dev
-                var totalSquareVariance = 0.0;
-                foreach (var afval in afvals)
-                {
-                    totalSquareVariance += Math.Pow(afval.ValueAsDouble() - avg, 2);
-                }
-
-                var avgSqDev = totalSquareVariance / (double)afvals.Count;
-                var stdev = Math.Sqrt(avgSqDev);
-
-                // Determine the values outside of the boundaries, and remove them
-                var cutoff = stdev * numStDevs;
-                var startingCount = afvals.Count;
-
-                afvals.RemoveAll(a => Math.Abs(a.ValueAsDouble() - avg) > cutoff);
-
-                // If no items were removed, output the average and break the loop
-                if (afvals.Count == startingCount)
+                else
                 {
                     output.UpdateValue(new AFValue(avg, mySnapshotEvent.Value.Timestamp), AFUpdateOption.Insert);
                     break;
