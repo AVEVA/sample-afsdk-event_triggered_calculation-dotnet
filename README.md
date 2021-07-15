@@ -1,16 +1,16 @@
-# AFSDK Custom Calculation - Event Triggered
+# AF SDK Custom Calculation - Event Triggered
 
 **Version:** 1.0.0
 
 [![Build Status](https://dev.azure.com/osieng/engineering/_apis/build/status/product-readiness/osisoft.sample-ocs-data_views_r-r?branchName=main)](https://dev.azure.com/osieng/engineering/_build/latest?definitionId=3168&branchName=main)  
 *change pipeline link*
 
-Built with .NET Framework 4.8 and AFSDK 2.10.9
+Built with .NET Framework 4.8 and AF SDK 2.10.9
 
 
-The sample code in this topic demonstrates how to utilize the AFSDK to perform custom calculations that are beyond the functionality provided by Asset Analytics.
+The sample code in this topic demonstrates how to utilize the AF SDK to perform custom calculations that are beyond the functionality provided by Asset Analytics.
 
-Previously, this use case was handled by either PI Advance Calculation Engine (ACE) or custom coded solutions. Following the [announcement of PI ACE's retirement](https://pisquare.osisoft.com/s/article/000036664), this sample is intended to provide assistance to customers migrating from PI ACE to a custom solution.
+Previously, this use case was handled by either PI Advanced Calculation Engine (ACE) or custom coded solutions. Following the [announcement of PI ACE's retirement](https://pisquare.osisoft.com/s/article/000036664), this sample is intended to provide assistance to customers migrating from PI ACE to a custom solution.
 
 ## Calculation Work Flow
 
@@ -38,8 +38,8 @@ The calculation logic itself is not the main purpose of the sample, but it demon
 
 ## Prerequisites
 
-- The AFSDK and corresponding minimum version of .NET Framework must be installed on any machine executing this code  
-Note: This sample uses `AFSDK 2.10.9` and `.NET Framework 4.8`. Older versions of the AFSDK may require code changes.
+- The AF SDK and corresponding minimum version of .NET Framework must be installed on any machine executing this code  
+Note: This sample uses `AF SDK 2.10.9` and `.NET Framework 4.8`. Older versions of the AF SDK may require code changes.
 - A Data Archive that is accessable from the machine executing this code
 - The account executing the code must have a mapping for an identity with permissions to:
     - Read data from the input tag(s)
@@ -58,6 +58,6 @@ Note: This sample uses `AFSDK 2.10.9` and `.NET Framework 4.8`. Older versions o
 
 ---
 
-For the main AFSDK Custom Calculations Samples landing page [ReadMe](https://github.com/osisoft/OSI-Samples-PI-System/tree/main/docs/AFSDK-Custom-Calculations-Docs)  
+For the main AF SDK Custom Calculations Samples landing page [ReadMe](https://github.com/osisoft/OSI-Samples-PI-System/tree/main/docs/AF-SDK-Custom-Calculations-Docs)  
 For the main PI System Samples landing page [ReadMe](https://github.com/osisoft/OSI-Samples-PI-System)  
 For the main OSIsoft Samples landing page [ReadMe](https://github.com/osisoft/OSI-Samples)
