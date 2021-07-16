@@ -2,7 +2,7 @@ trigger:
   batch: true
   branches:
     include:
-      - master
+      - main
   paths:
     include:
       - '/'
@@ -10,7 +10,7 @@ trigger:
 pr:
   branches:
     include:
-      - master
+      - main
   paths:
     include:
       - '/'
@@ -20,7 +20,7 @@ schedules:
     displayName: Weekly build
     branches:
       include:
-        - master
+        - main
     always: true
 
 resources:
@@ -41,10 +41,6 @@ variables:
     value: product-readiness.afsdk_custom_calc_event_dotnet.json
   - name: analysisProject
     value: PI_AFSDKCustomCalcEvent_DotNet
-  - name: run_import
-    value: false
-  - name: run_delete
-    value: false
 
 jobs:
   - job: Tests
