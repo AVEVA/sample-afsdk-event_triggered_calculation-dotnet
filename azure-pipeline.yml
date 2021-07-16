@@ -78,7 +78,14 @@ jobs:
       demands: COMPUTERNAME -equals $(buildAgent)
 
     steps:
+    - script: |
+        nuget restore
+      workingDirectory: $(Build.SourcesDirectory)$(projPath)
+      displayName: 'nuget restore'
+
     - template: '/miscellaneous/build_templates/analysis.yml@templates'
       parameters:
         language: dotnet
         copyFile: true
+
+    - template: '/miscellaneous/build_templates/binskim.yml@templates'
