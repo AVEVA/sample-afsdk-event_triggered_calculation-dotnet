@@ -9,11 +9,20 @@ namespace EventTriggeredCalc
 {
     public static class Program
     {
+        /// <summary>
+        /// Entry point of the program
+        /// </summary>
         public static void Main()
         {
             var success = MainLoop(false);
         }
 
+        /// <summary>
+        /// This function loops until manually stopped, triggering the calculation event on the prescribed timer.
+        /// If being tested, it stops after the set amount of time
+        /// </summary>
+        /// <param name="test">Whether the function is running a test or not</param>
+        /// <returns>true if successful</returns>
         public static bool MainLoop(bool test = false)
         {
             #region configuration
@@ -114,6 +123,11 @@ namespace EventTriggeredCalc
             }
         }
 
+        /// <summary>
+        /// This function performs the calculation and writes the value to the output tag
+        /// </summary>
+        /// <param name="mySnapshotEvent">The snapshot event that the calculation is being performed against</param>
+        /// <param name="output">The output tag to be written to</param>
         private static void PerformCalculation(AFDataPipeEvent mySnapshotEvent, PIPoint output)
         {
             // Configuration
