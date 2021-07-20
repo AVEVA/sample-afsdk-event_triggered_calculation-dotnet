@@ -29,7 +29,7 @@ namespace EventTriggeredCalc
 
             var inputTagName = "cdt158";
             var outputTagName = "cdt158_output_eventbased";
-            var pauseMs = 1000; // time to pause each loop, in ms
+            var pauseMs = 1 * 1000; // time to pause each loop, in ms
             var maxEventsPerPeriod = 10;
 
             // For unit testing

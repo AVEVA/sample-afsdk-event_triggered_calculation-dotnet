@@ -40,6 +40,7 @@ The calculation logic itself is not the main purpose of the sample, but it demon
 - The AF SDK and corresponding minimum version of .NET Framework must be installed on any machine executing this code  
 Note: This sample uses `AF SDK 2.10.9` and `.NET Framework 4.8`. Older versions of the AF SDK may require code changes.
 - A Data Archive that is accessable from the machine executing this code
+    - The unit test, as written, requires CDT158 to exist on this Data Archive and to be updating with data
 - The account executing the code must have a mapping for an identity with permissions to:
     - Read data from the input tag(s)
     - Write data to the output tag(s)
