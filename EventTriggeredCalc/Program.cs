@@ -1,20 +1,28 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading;
+using System.Timers;
 using OSIsoft.AF.Asset;
 using OSIsoft.AF.Data;
 using OSIsoft.AF.PI;
+using Timer = System.Timers.Timer;
 
 namespace EventTriggeredCalc
 {
+
     public static class Program
     {
+        private static Timer _aTimer;
+        private static PIPoint _output;
+        private static PIDataPipe _myDataPipe;
+        private static int _maxEventsPerPeriod;
+
         /// <summary>
         /// Entry point of the program
         /// </summary>
         public static void Main()
         {
-            var success = MainLoop(false);
+            MainLoop(false);
         }
 
         /// <summary>
@@ -30,95 +38,105 @@ namespace EventTriggeredCalc
             var inputTagName = "cdt158";
             var outputTagName = "cdt158_output_eventbased";
             var pauseMs = 1 * 1000; // time to pause each loop, in ms
-            var maxEventsPerPeriod = 10;
+            _maxEventsPerPeriod = 10;
 
-            // For unit testing
-            var testStart = DateTime.Now;
-            var maxTestSeconds = 400;
-            var numTestLoops = 0;
-            var goalNumTestLoops = 2;
 
             #endregion // configuration
 
             // Get PI Data Archive object
+            PIServer myServer;
+            var dataArchiveName = "";
+            
+            // var dataArchiveName = "PISRV01";
 
             // Default server
-            var myServer = PIServers.GetPIServers().DefaultPIServer;
-
-            // Named server
-            // var dataArchiveName = "PISRV01";
-            // var myServer = PIServers.GetPIServers()[dataArchiveName];
+            if (string.IsNullOrWhiteSpace(dataArchiveName))
+            {
+                myServer = PIServers.GetPIServers().DefaultPIServer;
+            }
+            else
+            {
+                myServer = PIServers.GetPIServers()[dataArchiveName];
+            }
 
             // Get or create the output PI Point
-            PIPoint outputTag;
-            
             try
             {
-                // look for the output tag
-                outputTag = PIPoint.FindPIPoint(myServer, outputTagName);
+                _output = PIPoint.FindPIPoint(myServer, outputTagName);
             }
             catch (PIPointInvalidException)
             {
-                // create it if it couldn't find it
-                outputTag = myServer.CreatePIPoint(outputTagName);
-                outputTag.SetAttribute(PICommonPointAttributes.PointType, PIPointType.Float64);
+                _output = myServer.CreatePIPoint(outputTagName);
+                _output.SetAttribute(PICommonPointAttributes.PointType, PIPointType.Float64);
             }
 
             // List of input tags whose updates should trigger a calculation
-            var myList = PIPoint.FindPIPoints(myServer, new List<String> { inputTagName });
+            var myList = PIPoint.FindPIPoints(myServer, new List<string> { inputTagName });
 
             // Create a new data pipe for snapshot events
-            using (var myDataPipe = new PIDataPipe(AFDataPipeType.Snapshot))
+            _myDataPipe = new PIDataPipe(AFDataPipeType.Snapshot);
+            _myDataPipe.AddSignups(myList);
+
+
+            // Create a timer with the specified interval of checking for updates
+            _aTimer = new Timer();
+            _aTimer.Interval = pauseMs;
+
+            // Add the calculation to the timer's elapsed trigger event handler list
+            _aTimer.Elapsed += CheckForUpdates;
+
+            // Enable the timer and have it reset on each trigger
+            _aTimer.AutoReset = true;
+            _aTimer.Enabled = true;
+
+            // Allow the program to run indefinitely if not being tested
+            if (!test)
             {
-                // Sign up for updates on the points
-                myDataPipe.AddSignups(myList);
+                Console.WriteLine($"Snapshots updates are being checked for every {pauseMs} ms. Press <ENTER> to end... ");
+                Console.ReadLine();
+            }
+            else
+            {
+                // Pause to let the calculation run for four minutes to test 
+                Thread.Sleep(4 * 60 * 1000);
+            }
 
-                // Loop forever
-                while(true)
+            // Dispose the timer and data pipe objects then quit
+            if (_aTimer != null)
+            {
+                Console.WriteLine("Disposing timer...");
+                _aTimer.Dispose();
+            }    
+            
+            if (_myDataPipe != null)
+            {
+                Console.WriteLine("Disposing data pipe...");
+                _myDataPipe.Dispose();
+            }
+
+            Console.WriteLine("Quitting...");
+            return true;
+        }
+
+        /// <summary>
+        /// This function checks for snapshot updates and triggers the calculations against them
+        /// </summary>
+        /// <param name="source">The source of the event</param>
+        /// <param name="e">An ElapsedEventArgs object that contains the event data</param>
+        private static void CheckForUpdates(object source, ElapsedEventArgs e)
+        {
+            // Get events that have occurred since the last check
+            var myResults = _myDataPipe.GetUpdateEvents(_maxEventsPerPeriod);
+
+            foreach (var mySnapshotEvent in myResults.Results)
+            {
+                // If the event was added or updated in the snapshot...
+                if (mySnapshotEvent.Action == AFDataPipeAction.Add ||
+                    mySnapshotEvent.Action == AFDataPipeAction.Update)
                 {
-                    // Get events that have occurred since the last check
-                    var myResults = myDataPipe.GetUpdateEvents(maxEventsPerPeriod);
+                    // Trigger the calculation against this snapshot event
+                    PerformCalculation(mySnapshotEvent);
 
-                    // If there are some results
-                    if (myResults.Results.Count > 0)
-                    {
-                        // For each event...
-                        foreach (var mySnapshotEvent in myResults.Results)
-                        {
-                            // If the event was added or updated in the snapshot...
-                            if (mySnapshotEvent.Action == AFDataPipeAction.Add ||
-                                mySnapshotEvent.Action == AFDataPipeAction.Update)
-                            {
-                                // Trigger the calculation against this snapshot event
-                                PerformCalculation(mySnapshotEvent, outputTag);
-
-                                if (test)
-                                {
-                                    ++numTestLoops;
-                                }
-                            }
-                        }
-                    }
-
-                    // Handle the test results
-                    if (test)
-                    {
-                        // If the test has loop enough times, return a successful test
-                        if (numTestLoops >= goalNumTestLoops)
-                        {
-                            return true;
-                        }
-
-                        // If the test has taken too long, return a failed test
-                        if ((DateTime.Now - testStart).TotalSeconds >= maxTestSeconds)
-                        {
-                            return false;
-                        }
-                    }
-                    
-
-                    // Wait for the next cycle - pausing decreases the number of checks performed for new updates, reducing processing requirements
-                    Thread.Sleep(pauseMs);
                 }
             }
         }
@@ -127,8 +145,7 @@ namespace EventTriggeredCalc
         /// This function performs the calculation and writes the value to the output tag
         /// </summary>
         /// <param name="mySnapshotEvent">The snapshot event that the calculation is being performed against</param>
-        /// <param name="output">The output tag to be written to</param>
-        private static void PerformCalculation(AFDataPipeEvent mySnapshotEvent, PIPoint output)
+        private static void PerformCalculation(AFDataPipeEvent mySnapshotEvent)
         {
             // Configuration
             var numValues = 100;  // number of values to find the average of
@@ -138,14 +155,11 @@ namespace EventTriggeredCalc
             var afvals = mySnapshotEvent.Value.PIPoint.RecordedValuesByCount(mySnapshotEvent.Value.Timestamp, numValues, false, AFBoundaryType.Interpolated, null, false);
 
             // Remove bad values
-            afvals.RemoveAll(a => !a.IsGood);
+            afvals.RemoveAll(afval => !afval.IsGood);
 
             // Loop until no new values were eliminated for being outside of the boundaries
             while (true)
             {
-
-                var avg = 0.0;
-
                 // Don't loop if all values have been removed
                 if (afvals.Count > 0)
                 {
@@ -157,7 +171,7 @@ namespace EventTriggeredCalc
                         total += afval.ValueAsDouble();
                     }
 
-                    avg = total / afvals.Count;
+                    var avg = total / afvals.Count;
 
                     // Calculate the st dev
                     var totalSquareVariance = 0.0;
@@ -173,18 +187,18 @@ namespace EventTriggeredCalc
                     var cutoff = stdev * numStDevs;
                     var startingCount = afvals.Count;
 
-                    afvals.RemoveAll(a => Math.Abs(a.ValueAsDouble() - avg) > cutoff);
+                    afvals.RemoveAll(afval => Math.Abs(afval.ValueAsDouble() - avg) > cutoff);
 
                     // If no items were removed, output the average and break the loop
                     if (afvals.Count == startingCount)
                     {
-                        output.UpdateValue(new AFValue(avg, mySnapshotEvent.Value.Timestamp), AFUpdateOption.Insert);
+                        _output.UpdateValue(new AFValue(avg, mySnapshotEvent.Value.Timestamp), AFUpdateOption.Insert);
                         break;
                     }
                 }
                 else
                 {
-                    output.UpdateValue(new AFValue(avg, mySnapshotEvent.Value.Timestamp), AFUpdateOption.Insert);
+                    // If all of the values have been removed, don't write any output values
                     break;
                 }
             }            

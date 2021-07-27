@@ -387,6 +387,9 @@ FodyWeavers.xsd
 .idea/
 *.sln.iml
 
+# Custom additions
+*.GeneratedMSBuildEditorConfig.editorconfig
+
 ## Credential Config Files
 product-readiness.*
 appsettings.json
