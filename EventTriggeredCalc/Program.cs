@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
 using System.Threading;
 using System.Timers;
+using Microsoft.Extensions.Configuration;
 using OSIsoft.AF.Asset;
 using OSIsoft.AF.Data;
 using OSIsoft.AF.PI;
@@ -16,6 +19,8 @@ namespace EventTriggeredCalc
         private static PIPoint _output;
         private static PIDataPipe _myDataPipe;
         private static int _maxEventsPerPeriod;
+        private static IConfiguration _configuration;
+        private static Exception _toThrow;
 
         /// <summary>
         /// Entry point of the program
@@ -33,89 +38,102 @@ namespace EventTriggeredCalc
         /// <returns>true if successful</returns>
         public static bool MainLoop(bool test = false)
         {
-            #region configuration
-
-            var inputTagName = "cdt158";
-            var outputTagName = "cdt158_output_eventbased";
-            var pauseMs = 1 * 1000; // time to pause each loop, in ms
-            _maxEventsPerPeriod = 10;
-
-
-            #endregion // configuration
-
-            // Get PI Data Archive object
-            PIServer myServer;
-            var dataArchiveName = "";
-            
-            // var dataArchiveName = "PISRV01";
-
-            // Default server
-            if (string.IsNullOrWhiteSpace(dataArchiveName))
-            {
-                myServer = PIServers.GetPIServers().DefaultPIServer;
-            }
-            else
-            {
-                myServer = PIServers.GetPIServers()[dataArchiveName];
-            }
-
-            // Get or create the output PI Point
             try
             {
-                _output = PIPoint.FindPIPoint(myServer, outputTagName);
+                #region configurationSettings
+                _configuration = new ConfigurationBuilder()
+                   .SetBasePath(Directory.GetCurrentDirectory())
+                   .AddJsonFile("appsettings.json")
+                   .AddJsonFile("appsettings.test.json", optional: true)
+                   .Build();
+
+                var dataArchiveName = _configuration["PIDataArchive"];
+                var inputTagName = _configuration["InputTag"];
+                var outputTagName = _configuration["OutputTag"];
+                var updateCheckIntervalMS = int.Parse(_configuration["UpdateCheckIntervalMS"], CultureInfo.CurrentCulture); // how long to pause between cycles, in ms
+                _maxEventsPerPeriod = int.Parse(_configuration["MaxEventsPerPeriod"], CultureInfo.CurrentCulture); // number of seconds to offset from the top of the minute
+                #endregion // configurationSettings
+
+                (_configuration as ConfigurationRoot).Dispose();
+
+                // Get PI Data Archive object
+                PIServer myServer;
+
+                if (string.IsNullOrWhiteSpace(dataArchiveName))
+                {
+                    myServer = PIServers.GetPIServers().DefaultPIServer;
+                }
+                else
+                {
+                    myServer = PIServers.GetPIServers()[dataArchiveName];
+                }
+
+                // Get or create the output PI Point
+                try
+                {
+                    _output = PIPoint.FindPIPoint(myServer, outputTagName);
+                }
+                catch (PIPointInvalidException)
+                {
+                    _output = myServer.CreatePIPoint(outputTagName);
+                    _output.SetAttribute(PICommonPointAttributes.PointType, PIPointType.Float64);
+                }
+
+                // List of input tags whose updates should trigger a calculation
+                var myList = PIPoint.FindPIPoints(myServer, new List<string> { inputTagName });
+
+                // Create a new data pipe for snapshot events
+                _myDataPipe = new PIDataPipe(AFDataPipeType.Snapshot);
+                _myDataPipe.AddSignups(myList);
+
+
+                // Create a timer with the specified interval of checking for updates
+                _aTimer = new Timer();
+                _aTimer.Interval = updateCheckIntervalMS;
+
+                // Add the calculation to the timer's elapsed trigger event handler list
+                _aTimer.Elapsed += CheckForUpdates;
+
+                // Enable the timer and have it reset on each trigger
+                _aTimer.AutoReset = true;
+                _aTimer.Enabled = true;
+
+                // Allow the program to run indefinitely if not being tested
+                if (!test)
+                {
+                    Console.WriteLine($"Snapshots updates are being checked for every {updateCheckIntervalMS} ms. Press <ENTER> to end... ");
+                    Console.ReadLine();
+                }
+                else
+                {
+                    // Pause to let the calculation run for four minutes to test 
+                    Thread.Sleep(4 * 60 * 1000);
+                }
             }
-            catch (PIPointInvalidException)
+            catch (Exception ex)
             {
-                _output = myServer.CreatePIPoint(outputTagName);
-                _output.SetAttribute(PICommonPointAttributes.PointType, PIPointType.Float64);
+                Console.WriteLine(ex);
+                _toThrow = ex;
+                throw;
             }
-
-            // List of input tags whose updates should trigger a calculation
-            var myList = PIPoint.FindPIPoints(myServer, new List<string> { inputTagName });
-
-            // Create a new data pipe for snapshot events
-            _myDataPipe = new PIDataPipe(AFDataPipeType.Snapshot);
-            _myDataPipe.AddSignups(myList);
-
-
-            // Create a timer with the specified interval of checking for updates
-            _aTimer = new Timer();
-            _aTimer.Interval = pauseMs;
-
-            // Add the calculation to the timer's elapsed trigger event handler list
-            _aTimer.Elapsed += CheckForUpdates;
-
-            // Enable the timer and have it reset on each trigger
-            _aTimer.AutoReset = true;
-            _aTimer.Enabled = true;
-
-            // Allow the program to run indefinitely if not being tested
-            if (!test)
+            finally
             {
-                Console.WriteLine($"Snapshots updates are being checked for every {pauseMs} ms. Press <ENTER> to end... ");
-                Console.ReadLine();
-            }
-            else
-            {
-                // Pause to let the calculation run for four minutes to test 
-                Thread.Sleep(4 * 60 * 1000);
-            }
+                // Dispose the timer and data pipe objects then quit
+                if (_aTimer != null)
+                {
+                    Console.WriteLine("Disposing timer...");
+                    _aTimer.Dispose();
+                }
 
-            // Dispose the timer and data pipe objects then quit
-            if (_aTimer != null)
-            {
-                Console.WriteLine("Disposing timer...");
-                _aTimer.Dispose();
-            }    
-            
-            if (_myDataPipe != null)
-            {
-                Console.WriteLine("Disposing data pipe...");
-                _myDataPipe.Dispose();
+                if (_myDataPipe != null)
+                {
+                    Console.WriteLine("Disposing data pipe...");
+                    _myDataPipe.Dispose();
+                }
             }
 
             Console.WriteLine("Quitting...");
-            return true;
+            return _toThrow == null;
         }
 
         /// <summary>
