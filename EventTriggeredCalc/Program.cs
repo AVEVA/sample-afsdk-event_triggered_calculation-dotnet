@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
+using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Timers;
-using Microsoft.Extensions.Configuration;
 using OSIsoft.AF.Asset;
 using OSIsoft.AF.Data;
 using OSIsoft.AF.PI;
@@ -16,10 +16,9 @@ namespace EventTriggeredCalc
     public static class Program
     {
         private static Timer _aTimer;
-        private static PIPoint _output;
+        private static List<CalculationContextResolved> _contextListResolved = new List<CalculationContextResolved>();
         private static PIDataPipe _myDataPipe;
         private static int _maxEventsPerPeriod;
-        private static IConfiguration _configuration;
         private static Exception _toThrow;
 
         /// <summary>
@@ -41,55 +40,68 @@ namespace EventTriggeredCalc
             try
             {
                 #region configurationSettings
-                _configuration = new ConfigurationBuilder()
-                   .SetBasePath(Directory.GetCurrentDirectory())
-                   .AddJsonFile("appsettings.json")
-                   .AddJsonFile("appsettings.test.json", optional: true)
-                   .Build();
+                AppSettings settings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(Directory.GetCurrentDirectory() + "/appsettings.json"));
 
-                var dataArchiveName = _configuration["PIDataArchive"];
-                var inputTagName = _configuration["InputTag"];
-                var outputTagName = _configuration["OutputTag"];
-                var updateCheckIntervalMS = int.Parse(_configuration["UpdateCheckIntervalMS"], CultureInfo.CurrentCulture); // how long to pause between cycles, in ms
-                _maxEventsPerPeriod = int.Parse(_configuration["MaxEventsPerPeriod"], CultureInfo.CurrentCulture); // number of seconds to offset from the top of the minute
+                _maxEventsPerPeriod = settings.MaxEventsPerPeriod;
                 #endregion // configurationSettings
-
-                (_configuration as ConfigurationRoot).Dispose();
 
                 // Get PI Data Archive object
                 PIServer myServer;
 
-                if (string.IsNullOrWhiteSpace(dataArchiveName))
+                if (string.IsNullOrWhiteSpace(settings.PIDataArchiveName))
                 {
                     myServer = PIServers.GetPIServers().DefaultPIServer;
                 }
                 else
                 {
-                    myServer = PIServers.GetPIServers()[dataArchiveName];
+                    myServer = PIServers.GetPIServers()[settings.PIDataArchiveName];
                 }
 
-                // Get or create the output PI Point
-                try
-                {
-                    _output = PIPoint.FindPIPoint(myServer, outputTagName);
-                }
-                catch (PIPointInvalidException)
-                {
-                    _output = myServer.CreatePIPoint(outputTagName);
-                    _output.SetAttribute(PICommonPointAttributes.PointType, PIPointType.Float64);
-                }
+                // Keep track of the resolved input PIPoints to sign up for updates
+                List<PIPoint> subscriptionPIPointList = new List<PIPoint>();
 
-                // List of input tags whose updates should trigger a calculation
-                var myList = PIPoint.FindPIPoints(myServer, new List<string> { inputTagName });
+                // Resolve the input and output tag names to PIPoint objects
+                foreach (var context in settings.CalculationContexts)
+                {
+                    CalculationContextResolved thisResolvedContext = new CalculationContextResolved();
+
+                    try
+                    {
+                        // Resolve the input PIPoint object from its name
+                        thisResolvedContext.InputTag = PIPoint.FindPIPoint(myServer, context.InputTagName);
+
+                        // Add the resolved PIPoint to the snapshot update subscription list
+                        subscriptionPIPointList.Add(thisResolvedContext.InputTag);
+
+                        try
+                        {
+                            // Try to resolve the output PIPoint object from its name
+                            thisResolvedContext.OutputTag = PIPoint.FindPIPoint(myServer, context.OutputTagName);
+                        }
+                        catch (PIPointInvalidException)
+                        {
+                            // If it does not exist, create it
+                            thisResolvedContext.OutputTag = myServer.CreatePIPoint(context.OutputTagName);
+                            thisResolvedContext.OutputTag.SetAttribute(PICommonPointAttributes.PointType, PIPointType.Float64);
+                        }
+
+                        // If this was successful, add this context pair to the list of resolved contexts
+                        _contextListResolved.Add(thisResolvedContext);
+                    }
+                    catch (Exception ex)
+                    {
+                        // If not successful, inform the user and move on to the next pair
+                        Console.WriteLine($"Input tag {context.InputTagName} will be skipped due to error: {ex.Message}");
+                    }
+                }
 
                 // Create a new data pipe for snapshot events
                 _myDataPipe = new PIDataPipe(AFDataPipeType.Snapshot);
-                _myDataPipe.AddSignups(myList);
-
+                _myDataPipe.AddSignups(subscriptionPIPointList);
 
                 // Create a timer with the specified interval of checking for updates
                 _aTimer = new Timer();
-                _aTimer.Interval = updateCheckIntervalMS;
+                _aTimer.Interval = settings.UpdateCheckIntervalMS;
 
                 // Add the calculation to the timer's elapsed trigger event handler list
                 _aTimer.Elapsed += CheckForUpdates;
@@ -101,7 +113,7 @@ namespace EventTriggeredCalc
                 // Allow the program to run indefinitely if not being tested
                 if (!test)
                 {
-                    Console.WriteLine($"Snapshots updates are being checked for every {updateCheckIntervalMS} ms. Press <ENTER> to end... ");
+                    Console.WriteLine($"Snapshots updates are being checked for every {settings.UpdateCheckIntervalMS} ms. Press <ENTER> to end... ");
                     Console.ReadLine();
                 }
                 else
@@ -152,8 +164,11 @@ namespace EventTriggeredCalc
                 if (mySnapshotEvent.Action == AFDataPipeAction.Add ||
                     mySnapshotEvent.Action == AFDataPipeAction.Update)
                 {
+                    // Find the associated calculation context in order to obtain this update's corresponding output PIPoint
+                    var thisContext = _contextListResolved.Single(context => context.InputTag == mySnapshotEvent.Value.PIPoint);
+
                     // Trigger the calculation against this snapshot event
-                    PerformCalculation(mySnapshotEvent);
+                    PerformCalculation(mySnapshotEvent, thisContext.OutputTag);
 
                 }
             }
@@ -163,7 +178,7 @@ namespace EventTriggeredCalc
         /// This function performs the calculation and writes the value to the output tag
         /// </summary>
         /// <param name="mySnapshotEvent">The snapshot event that the calculation is being performed against</param>
-        private static void PerformCalculation(AFDataPipeEvent mySnapshotEvent)
+        private static void PerformCalculation(AFDataPipeEvent mySnapshotEvent, PIPoint output)
         {
             // Configuration
             var numValues = 100;  // number of values to find the average of
@@ -210,7 +225,7 @@ namespace EventTriggeredCalc
                     // If no items were removed, output the average and break the loop
                     if (afvals.Count == startingCount)
                     {
-                        _output.UpdateValue(new AFValue(avg, mySnapshotEvent.Value.Timestamp), AFUpdateOption.Insert);
+                        output.UpdateValue(new AFValue(avg, mySnapshotEvent.Value.Timestamp), AFUpdateOption.Insert);
                         break;
                     }
                 }
