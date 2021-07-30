@@ -49,7 +49,6 @@ The calculation logic itself is not the main purpose of the sample, but it demon
 - The AF SDK and corresponding minimum version of .NET Framework must be installed on any machine executing this code  
 Note: This sample uses `AF SDK 2.10.9` and `.NET Framework 4.8`. Older versions of the AF SDK may require code changes.
 - A Data Archive that is accessable from the machine executing this code
-    - The unit test, as written, requires CDT158 to exist on this Data Archive and to be updating with data
 - The account executing the code must have a mapping for an identity with permissions to:
     - Read data from the input tag(s)
     - Write data to the output tag(s)
@@ -57,7 +56,7 @@ Note: This sample uses `AF SDK 2.10.9` and `.NET Framework 4.8`. Older versions 
 
 ## Getting Started
 
-The sample is configured using the file [appsettings.placeholder.json](EventTriggeredCalc\appsettings.placeholder.json). Before editing, rename this file to `appsettings.json`. This repository's `.gitignore` rules should prevent the file from ever being checked in to any fork or branch, to ensure credentials are not compromised.
+The sample is configured using the file [appsettings.placeholder.json](EventTriggeredCalc\appsettings.placeholder.json). Before editing, rename this file to `appsettings.json`. This repository's `.gitignore` rules should prevent the file from ever being checked in to any fork or branch.
 
 ```json
 {
@@ -81,7 +80,7 @@ The sample uses an implicit connection to the PI Data Archive under the context 
 
 1. Clone the sample repository to a local folder
 1. In the EventTriggeredCalc directory, create appsettings.json from [appsettings.placeholder.json](EventTriggeredCalc\appsettings.placeholder.json) and edit the configuration as necessary
-1. Build and run the solution using Visual Studio 
+1. Build and run the solution using Visual Studio
 1. Observe in a client tool (PI SMT, PI Vision, etc) that the output tag is created and being written to in conjunction with each new snapshot event of the input tag
 
 

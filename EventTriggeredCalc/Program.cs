@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Timers;
 using OSIsoft.AF.Asset;
 using OSIsoft.AF.Data;
@@ -21,25 +22,39 @@ namespace EventTriggeredCalc
         private static int _maxEventsPerPeriod;
         private static Exception _toThrow;
 
+
         /// <summary>
         /// Entry point of the program
         /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "User quits from console")]
         public static void Main()
         {
-            MainLoop(false);
+            CancellationTokenSource source = new CancellationTokenSource();
+            CancellationToken token = source.Token;
+
+            _ = MainLoop(token);
+
+            Console.WriteLine($"Press <ENTER> to end... ");
+            Console.ReadLine();
+
+            source.Cancel();
+            Console.WriteLine("Quitting Main...");
         }
 
         /// <summary>
         /// This function loops until manually stopped, triggering the calculation event on the prescribed timer.
         /// If being tested, it stops after the set amount of time
         /// </summary>
-        /// <param name="test">Whether the function is running a test or not</param>
+        /// <param name="token">Controls if the loop should stop and exit</param>
         /// <returns>true if successful</returns>
-        public static bool MainLoop(bool test = false)
+        public static async Task<bool> MainLoop(CancellationToken token)
         {
             try
             {
                 #region configurationSettings
+                string currD = Directory.GetCurrentDirectory();
+                DirectoryInfo parD = Directory.GetParent(Directory.GetCurrentDirectory());
+                string parparparDName = Directory.GetParent(Directory.GetCurrentDirectory()).Parent.Parent.FullName;
                 AppSettings settings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(Directory.GetCurrentDirectory() + "/appsettings.json"));
 
                 _maxEventsPerPeriod = settings.MaxEventsPerPeriod;
@@ -70,9 +85,6 @@ namespace EventTriggeredCalc
                         // Resolve the input PIPoint object from its name
                         thisResolvedContext.InputTag = PIPoint.FindPIPoint(myServer, context.InputTagName);
 
-                        // Add the resolved PIPoint to the snapshot update subscription list
-                        subscriptionPIPointList.Add(thisResolvedContext.InputTag);
-
                         try
                         {
                             // Try to resolve the output PIPoint object from its name
@@ -85,8 +97,9 @@ namespace EventTriggeredCalc
                             thisResolvedContext.OutputTag.SetAttribute(PICommonPointAttributes.PointType, PIPointType.Float64);
                         }
 
-                        // If this was successful, add this context pair to the list of resolved contexts
+                        // If successful, add to the list of resolved contexts and the snapshot update subscription list
                         _contextListResolved.Add(thisResolvedContext);
+                        subscriptionPIPointList.Add(thisResolvedContext.InputTag);
                     }
                     catch (Exception ex)
                     {
@@ -110,17 +123,12 @@ namespace EventTriggeredCalc
                 _aTimer.AutoReset = true;
                 _aTimer.Enabled = true;
 
-                // Allow the program to run indefinitely if not being tested
-                if (!test)
-                {
-                    Console.WriteLine($"Snapshots updates are being checked for every {settings.UpdateCheckIntervalMS} ms. Press <ENTER> to end... ");
-                    Console.ReadLine();
-                }
-                else
-                {
-                    // Pause to let the calculation run for four minutes to test 
-                    Thread.Sleep(4 * 60 * 1000);
-                }
+                // Allow the program to run indefinitely until cancelled
+                await Task.Delay(Timeout.Infinite, token).ConfigureAwait(false);                
+            }
+            catch (TaskCanceledException)
+            {
+                Console.WriteLine("Task canceled successfully");
             }
             catch (Exception ex)
             {
@@ -144,7 +152,7 @@ namespace EventTriggeredCalc
                 }
             }
 
-            Console.WriteLine("Quitting...");
+            Console.WriteLine("Quitting MainLoop...");
             return _toThrow == null;
         }
 
