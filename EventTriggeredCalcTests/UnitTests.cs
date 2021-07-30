@@ -15,7 +15,6 @@ namespace EventTriggeredCalcTests
     public class UnitTests
     {
         [Fact]
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "unit test quits the program")]
         public void EventTriggeredCalcTest()
         {
             double valToWrite = 0.0;
@@ -110,8 +109,16 @@ namespace EventTriggeredCalcTests
                 // Pause to give the calculations enough time to complete
                 Thread.Sleep(15 * 1000);
 
-                // Stop the calculation
+                // Cancel the operation and pause to ensure it's heard
                 source.Cancel();
+                Thread.Sleep(1 * 1000);
+
+                // Dispose of the cancellation token source
+                if (source != null)
+                {
+                    Console.WriteLine("Disposing cancellation token source...");
+                    source.Dispose();
+                }
 
                 // Check that output tags have three values each
                 foreach (var context in contextListResolved)

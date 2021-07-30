@@ -26,7 +26,6 @@ namespace EventTriggeredCalc
         /// <summary>
         /// Entry point of the program
         /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "User quits from console")]
         public static void Main()
         {
             CancellationTokenSource source = new CancellationTokenSource();
@@ -37,7 +36,17 @@ namespace EventTriggeredCalc
             Console.WriteLine($"Press <ENTER> to end... ");
             Console.ReadLine();
 
+            // Cancel the operation and pause to ensure it's heard
             source.Cancel();
+            Thread.Sleep(1 * 1000); 
+            
+            // Dispose of the cancellation token source and exit the program
+            if (source != null)
+            {
+                Console.WriteLine("Disposing cancellation token source...");
+                source.Dispose();
+            }
+            
             Console.WriteLine("Quitting Main...");
         }
 
