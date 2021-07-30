@@ -33,8 +33,6 @@ resources:
 
 variables:
   - template: '/miscellaneous/build_templates/variables.yml@templates'
-  - name: projPath
-    value: ''
   - name: CredFile
     value: appsettings.json
   - name: CredFileLibrary
@@ -52,16 +50,16 @@ jobs:
         parameters:
           fileOriginal: $(CredFile)
           fileLibrary: $(CredFileLibrary)
-          filePath: $(projPath)
+          filePath: /EventTriggeredCalc
 
       - script: |
           nuget restore
-        workingDirectory: $(Build.SourcesDirectory)$(projPath)
+        workingDirectory: $(Build.SourcesDirectory)
         displayName: 'nuget restore'
 
       - script: |
           "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\MSBuild\Current\Bin\MSBuild.exe" EventTriggeredCalc.sln
-        workingDirectory: $(Build.SourcesDirectory)$(projPath)/
+        workingDirectory: $(Build.SourcesDirectory)/
         displayName: 'Build solution'
         
       - task: DotNetCoreCLI@2
@@ -70,7 +68,7 @@ jobs:
           command: test
           publishTestResults: true
           testRunTitle: '$(Agent.JobName) on $(imageName)'
-          workingDirectory: $(Build.SourcesDirectory)$(projPath)/
+          workingDirectory: $(Build.SourcesDirectory)/
 
   - job: Analysis
     pool:
@@ -80,7 +78,7 @@ jobs:
     steps:
     - script: |
         nuget restore
-      workingDirectory: $(Build.SourcesDirectory)$(projPath)
+      workingDirectory: $(Build.SourcesDirectory)
       displayName: 'nuget restore'
 
     - template: '/miscellaneous/build_templates/binskim.yml@templates'
