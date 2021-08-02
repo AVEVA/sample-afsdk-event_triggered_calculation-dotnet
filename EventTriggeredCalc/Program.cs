@@ -60,9 +60,6 @@ namespace EventTriggeredCalc
             try
             {
                 #region configurationSettings
-                string currD = Directory.GetCurrentDirectory();
-                DirectoryInfo parD = Directory.GetParent(Directory.GetCurrentDirectory());
-                string parparparDName = Directory.GetParent(Directory.GetCurrentDirectory()).Parent.Parent.FullName;
                 AppSettings settings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(Directory.GetCurrentDirectory() + "/appsettings.json"));
 
                 _maxEventsPerPeriod = settings.MaxEventsPerPeriod;
