@@ -116,7 +116,7 @@ namespace EventTriggeredCalc
                                 Console.WriteLine("Errors calling PIPoint.SaveAttributes:");
                                 foreach (var item in errors.Errors)
                                 {
-                                    Console.WriteLine("  {0}: {1}", item.Key, item.Value);
+                                    Console.WriteLine($"  {item.Key}: {item.Value}");
                                 }
 
                                 throw new Exception("Error saving Output PIPoint configuration changes");

@@ -62,11 +62,22 @@ namespace EventTriggeredCalcTests
                             // If it does not exist, create it
                             thisResolvedContext.InputTag = myServer.CreatePIPoint(context.InputTagName);
 
-                            // Turn off compression, set to Double, and confirm there were no errors in doing so
+                            // Turn off compression, set to Double
                             thisResolvedContext.InputTag.SetAttribute(PICommonPointAttributes.Compressing, 0);
                             thisResolvedContext.InputTag.SetAttribute(PICommonPointAttributes.PointType, PIPointType.Float64);
                             AFErrors<string> errors = thisResolvedContext.InputTag.SaveAttributes(PICommonPointAttributes.Compressing,
                                                                                                   PICommonPointAttributes.PointType);
+
+                            // If there were any errors, output them to the console then fail the test
+                            if (errors != null && errors.HasErrors)
+                            {
+                                Console.WriteLine("Errors calling PIPoint.SaveAttributes:");
+                                foreach (var item in errors.Errors)
+                                {
+                                    Console.WriteLine($"  {item.Key}: {item.Value}");
+                                }
+                            }
+
                             Assert.Null(errors);
                         }
 
@@ -86,6 +97,17 @@ namespace EventTriggeredCalcTests
                             thisResolvedContext.OutputTag.SetAttribute(PICommonPointAttributes.PointType, PIPointType.Float64);
                             AFErrors<string> errors = thisResolvedContext.OutputTag.SaveAttributes(PICommonPointAttributes.Compressing,
                                                                                                   PICommonPointAttributes.PointType);
+
+                            // If there were any errors, output them to the console then fail the test
+                            if (errors != null && errors.HasErrors)
+                            {
+                                Console.WriteLine("Errors calling PIPoint.SaveAttributes:");
+                                foreach (var item in errors.Errors)
+                                {
+                                    Console.WriteLine($"  {item.Key}: {item.Value}");
+                                }
+                            }
+
                             Assert.Null(errors);
                         }
 
