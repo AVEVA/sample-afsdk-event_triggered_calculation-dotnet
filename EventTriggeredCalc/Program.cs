@@ -197,23 +197,23 @@ namespace EventTriggeredCalc
                     var thisContext = _contextListResolved.Single(context => context.InputTag == mySnapshotEvent.Value.PIPoint);
 
                     // Trigger the calculation against this snapshot event
-                    PerformCalculation(mySnapshotEvent, thisContext.OutputTag);
+                    PerformCalculation(mySnapshotEvent.Value.Timestamp, thisContext);
                 }
             }
         }
 
         /// <summary>
         /// This function performs the calculation and writes the value to the output tag
-        /// </summary>
-        /// <param name="mySnapshotEvent">The snapshot event that the calculation is being performed against</param>
-        private static void PerformCalculation(AFDataPipeEvent mySnapshotEvent, PIPoint output)
+        /// <param name="triggerTime">The timestamp to perform the calculation against</param>
+        /// <param name="context">The context on which to perform this calculation</param>
+        private static void PerformCalculation(DateTime triggerTime, CalculationContextResolved context)
         {
             // Configuration
             var numValues = 100;  // number of values to find the average of
             var numStDevs = 1.75; // number of standard deviations of variance to allow
             
             // Obtain the recent values from the trigger timestamp
-            var afvals = mySnapshotEvent.Value.PIPoint.RecordedValuesByCount(mySnapshotEvent.Value.Timestamp, numValues, false, AFBoundaryType.Interpolated, null, false);
+            var afvals = context.InputTag.RecordedValuesByCount(triggerTime, numValues, false, AFBoundaryType.Interpolated, null, false);
 
             // Remove bad values
             afvals.RemoveAll(afval => !afval.IsGood);
@@ -252,14 +252,14 @@ namespace EventTriggeredCalc
                     // If no items were removed, output the average and break the loop
                     if (afvals.Count == startingCount)
                     {
-                        output.UpdateValue(new AFValue(avg, mySnapshotEvent.Value.Timestamp), AFUpdateOption.Insert);
+                        context.OutputTag.UpdateValue(new AFValue(avg, triggerTime), AFUpdateOption.Insert);
                         break;
                     }
                 }
                 else
                 {
                     // If all of the values have been removed, don't write any output values
-                    Console.WriteLine($"All values were eliminated from the set. No output will be written for {mySnapshotEvent.Value.Timestamp}.");
+                    Console.WriteLine($"All values were eliminated from the set. No output will be written for {triggerTime}.");
                     break;
                 }
             }            
