@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Threading;
-using System.Threading.Tasks;
 using EventTriggeredCalc;
 using OSIsoft.AF;
 using OSIsoft.AF.Asset;
@@ -97,7 +96,7 @@ namespace EventTriggeredCalcTests
                     }
                     catch (Exception ex)
                     {
-                        // If not successful, inform the user and move on to the next pair
+                        // If not successful, fail the test
                         Assert.True(false, ex.Message);
                     }
                 }
@@ -106,9 +105,9 @@ namespace EventTriggeredCalcTests
                 var source = new CancellationTokenSource();
                 var token = source.Token;
 
-                var success = EventTriggeredCalc.Program.MainLoop(token);
+                var success = Program.MainLoop(token);
 
-                // Write three values each to each input test tag
+                // Write three values to each input test tag
                 for (int i = 0; i < numValsToWrite; ++i)
                 {
                     DateTime currentTime = DateTime.Now;
@@ -146,7 +145,7 @@ namespace EventTriggeredCalcTests
                     // First, resolve the output tag to ensure the sample created it successfully
                     context.OutputTag = PIPoint.FindPIPoint(myServer, context.OutputTagName);
 
-                    // Obtain the values, that should exist, plus 2. The first is 'Pt Created' and the second would represent too many values created
+                    // Obtain the values that should exist, plus 2. The first is 'Pt Created' and the second would represent too many values created
                     var afvals = context.OutputTag.RecordedValuesByCount(DateTime.Now, numValsToWrite + 2, false, AFBoundaryType.Inside, null, false);
 
                     // Remove the initial 'Pt Created' value from the list
@@ -170,8 +169,6 @@ namespace EventTriggeredCalcTests
 
                         Assert.True(timeError < errorThreshold, $"Output timestamp was of {afvals[i].Timestamp.LocalTime} was further from " +
                             $"expected value of {timesWrittenTo[numValsToWrite - 1 - i]} by more than acceptable error of {errorThreshold}");
-
-                        // Assert.Equal(timesWrittenTo[numValsToWrite - 1 - i], afvals[i].Timestamp.LocalTime);
                     }
                 }
 
