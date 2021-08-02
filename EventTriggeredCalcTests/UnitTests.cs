@@ -42,15 +42,15 @@ namespace EventTriggeredCalcTests
                 }
 
                 // For each context pair, check that the input tag and output do not already exist, and create them
-                var contextListResolved = new List<CalculationContextResolved>();
+                var contextListResolved = new List<CalculationContextResolvedTest>();
 
                 foreach (var context in settings.CalculationContexts)
                 {
-                    var thisResolvedContext = new CalculationContextResolved();
+                    var thisResolvedContext = new CalculationContextResolvedTest();
 
                     try
                     {
-                        // Resolve the input PIPoint object from its name
+                        // Resolve the input PIPoint object from its name, ensuring it does not already exist
                         try
                         {
                             thisResolvedContext.InputTag = PIPoint.FindPIPoint(myServer, context.InputTagName);
@@ -82,32 +82,14 @@ namespace EventTriggeredCalcTests
 
                         try
                         {
-                            // Try to resolve the output PIPoint object from its name
+                            // Try to resolve the output PIPoint object from its name, ensuring it does not already exist
                             thisResolvedContext.OutputTag = PIPoint.FindPIPoint(myServer, context.OutputTagName);
                             Assert.True(false, "Output tag already exists.");
                         }
                         catch (PIPointInvalidException)
                         {
-                            // If it does not exist, create it
-                            thisResolvedContext.OutputTag = myServer.CreatePIPoint(context.OutputTagName);
-
-                            // Turn off compression, set to Double, and confirm there were no errors in doing so
-                            thisResolvedContext.OutputTag.SetAttribute(PICommonPointAttributes.Compressing, 0);
-                            thisResolvedContext.OutputTag.SetAttribute(PICommonPointAttributes.PointType, PIPointType.Float64);
-                            AFErrors<string> errors = thisResolvedContext.OutputTag.SaveAttributes(PICommonPointAttributes.Compressing,
-                                                                                                  PICommonPointAttributes.PointType);
-
-                            // If there were any errors, output them to the console then fail the test
-                            if (errors != null && errors.HasErrors)
-                            {
-                                Console.WriteLine("Errors calling PIPoint.SaveAttributes:");
-                                foreach (var item in errors.Errors)
-                                {
-                                    Console.WriteLine($"  {item.Key}: {item.Value}");
-                                }
-                            }
-
-                            Assert.Null(errors);
+                            // If it does not exist, let the sample create it. Store the name for easy resolution later
+                            thisResolvedContext.OutputTagName = context.OutputTagName;
                         }
 
                         // If successful, add to the list of resolved contexts and the snapshot update subscription list
@@ -124,7 +106,7 @@ namespace EventTriggeredCalcTests
                 var source = new CancellationTokenSource();
                 var token = source.Token;
 
-                _ = EventTriggeredCalc.Program.MainLoop(token);
+                var success = EventTriggeredCalc.Program.MainLoop(token);
 
                 // Write three values each to each input test tag
                 for (int i = 0; i < numValsToWrite; ++i)
@@ -155,10 +137,17 @@ namespace EventTriggeredCalcTests
                     source.Dispose();
                 }
 
+                // Confirm that the sample ran cleanly
+                Assert.True(success.Result);
+
                 // Check that output tags have three values each
                 foreach (var context in contextListResolved)
                 {
-                    var afvals = context.OutputTag.RecordedValuesByCount(DateTime.Now, numValsToWrite + 1, false, AFBoundaryType.Inside, null, false);
+                    // First, resolve the output tag to ensure the sample created it successfully
+                    context.OutputTag = PIPoint.FindPIPoint(myServer, context.OutputTagName);
+
+                    // Obtain the values, that should exist, plus 2. The first is 'Pt Created' and the second would represent too many values created
+                    var afvals = context.OutputTag.RecordedValuesByCount(DateTime.Now, numValsToWrite + 2, false, AFBoundaryType.Inside, null, false);
 
                     // Remove the initial 'Pt Created' value from the list
                     afvals.RemoveAll(afval => !afval.IsGood);

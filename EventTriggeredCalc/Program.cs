@@ -104,7 +104,7 @@ namespace EventTriggeredCalc
                             thisResolvedContext.OutputTag = myServer.CreatePIPoint(context.OutputTagName);
 
                             // Turn off compression, set to Double, and confirm there were no errors in doing so
-                            thisResolvedContext.OutputTag.SetAttribute(PICommonPointAttributes.PointType, PIPointType.Float64);
+                            thisResolvedContext.OutputTag.SetAttribute(PICommonPointAttributes.Compressing, 0);
                             thisResolvedContext.OutputTag.SetAttribute(PICommonPointAttributes.PointType, PIPointType.Float64);
                             AFErrors<string> errors = thisResolvedContext.OutputTag.SaveAttributes(PICommonPointAttributes.Compressing,
                                                                                                   PICommonPointAttributes.PointType);
@@ -147,7 +147,7 @@ namespace EventTriggeredCalc
                 _aTimer.AutoReset = true;
                 _aTimer.Enabled = true;
 
-                // Allow the program to run indefinitely until cancelled
+                // Allow the program to run indefinitely until canceled
                 await Task.Delay(Timeout.Infinite, token).ConfigureAwait(false);                
             }
             catch (TaskCanceledException)
