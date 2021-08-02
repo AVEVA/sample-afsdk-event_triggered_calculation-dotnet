@@ -20,8 +20,8 @@ namespace EventTriggeredCalcTests
         {
             double valToWrite = 0.0;
             int numValsToWrite = 3;
-            List<DateTime> timesWrittenTo = new List<DateTime>();
-            TimeSpan errorThreshold = new TimeSpan(0, 0, 0, 0, 1); // 1 ms time max error is acceptable due to floating point error
+            var timesWrittenTo = new List<DateTime>();
+            var errorThreshold = new TimeSpan(0, 0, 0, 0, 1); // 1 ms time max error is acceptable due to floating point error
 
             try
             {
@@ -42,11 +42,11 @@ namespace EventTriggeredCalcTests
                 }
 
                 // For each context pair, check that the input tag and output do not already exist, and create them
-                List<CalculationContextResolved> contextListResolved = new List<CalculationContextResolved>();
+                var contextListResolved = new List<CalculationContextResolved>();
 
                 foreach (var context in settings.CalculationContexts)
                 {
-                    CalculationContextResolved thisResolvedContext = new CalculationContextResolved();
+                    var thisResolvedContext = new CalculationContextResolved();
 
                     try
                     {
@@ -122,8 +122,8 @@ namespace EventTriggeredCalcTests
                 }
 
                 // Run MainLoop
-                CancellationTokenSource source = new CancellationTokenSource();
-                CancellationToken token = source.Token;
+                var source = new CancellationTokenSource();
+                var token = source.Token;
 
                 _ = EventTriggeredCalc.Program.MainLoop(token);
 
@@ -174,7 +174,7 @@ namespace EventTriggeredCalcTests
                         Assert.Equal(valToWrite, afvals[i].ValueAsDouble());
 
                         // Check that the timestamp is correct, iterate backwards because the AF SDK call is reversed time order
-                        TimeSpan timeError = new TimeSpan(0);
+                        var timeError = new TimeSpan(0);
                         if (timesWrittenTo[numValsToWrite - 1 - i] > afvals[i].Timestamp.LocalTime)
                             timeError = timesWrittenTo[numValsToWrite - 1 - i] - afvals[i].Timestamp.LocalTime;
                         else

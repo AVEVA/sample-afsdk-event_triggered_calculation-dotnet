@@ -14,7 +14,6 @@ using Timer = System.Timers.Timer;
 
 namespace EventTriggeredCalc
 {
-
     public static class Program
     {
         private static Timer _aTimer;
@@ -22,7 +21,6 @@ namespace EventTriggeredCalc
         private static PIDataPipe _myDataPipe;
         private static int _maxEventsPerPeriod;
         private static Exception _toThrow;
-
 
         /// <summary>
         /// Entry point of the program
@@ -203,7 +201,6 @@ namespace EventTriggeredCalc
 
                     // Trigger the calculation against this snapshot event
                     PerformCalculation(mySnapshotEvent, thisContext.OutputTag);
-
                 }
             }
         }
@@ -230,7 +227,6 @@ namespace EventTriggeredCalc
                 // Don't loop if all values have been removed
                 if (afvals.Count > 0)
                 {
-
                     // Calculate the mean
                     var total = 0.0;
                     foreach (var afval in afvals)
