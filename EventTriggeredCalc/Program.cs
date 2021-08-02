@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
+using OSIsoft.AF;
 using OSIsoft.AF.Asset;
 using OSIsoft.AF.Data;
 using OSIsoft.AF.PI;
@@ -103,7 +104,23 @@ namespace EventTriggeredCalc
                         {
                             // If it does not exist, create it
                             thisResolvedContext.OutputTag = myServer.CreatePIPoint(context.OutputTagName);
+
+                            // Turn off compression, set to Double, and confirm there were no errors in doing so
                             thisResolvedContext.OutputTag.SetAttribute(PICommonPointAttributes.PointType, PIPointType.Float64);
+                            thisResolvedContext.OutputTag.SetAttribute(PICommonPointAttributes.PointType, PIPointType.Float64);
+                            AFErrors<string> errors = thisResolvedContext.OutputTag.SaveAttributes(PICommonPointAttributes.Compressing,
+                                                                                                  PICommonPointAttributes.PointType);
+
+                            if (errors != null && errors.HasErrors)
+                            {
+                                Console.WriteLine("Errors calling PIPoint.SaveAttributes:");
+                                foreach (var item in errors.Errors)
+                                {
+                                    Console.WriteLine("  {0}: {1}", item.Key, item.Value);
+                                }
+
+                                throw new Exception("Error saving Output PIPoint configuration changes");
+                            }
                         }
 
                         // If successful, add to the list of resolved contexts and the snapshot update subscription list
