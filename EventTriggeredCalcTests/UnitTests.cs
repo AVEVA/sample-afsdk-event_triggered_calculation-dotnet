@@ -55,7 +55,6 @@ namespace EventTriggeredCalcTests
                         {
                             thisResolvedContext.InputTag = PIPoint.FindPIPoint(myServer, context.InputTagName);
                             Assert.False(true, "Input tag already exists.");
-
                         }
                         catch (PIPointInvalidException)
                         {
