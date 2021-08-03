@@ -44,7 +44,7 @@ The calculation logic itself is not the main purpose of the sample, but it demon
 1. Looping indefinitely:
     1. The standard deviation of the list of remaining values is determined
     1. Any value outside of 1.75 standard deviations is eliminated
-1. Once no new values are eliminated, the average of the remaining values is written to the output tag with a timestamp of the trigger time.
+1. Once no new values are eliminated, the mean of the remaining values is written to the output tag with a timestamp of the trigger time.
 
 ## Prerequisites
 

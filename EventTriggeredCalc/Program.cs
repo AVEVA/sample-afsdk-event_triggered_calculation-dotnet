@@ -252,28 +252,28 @@ namespace EventTriggeredCalc
                         total += afval.ValueAsDouble();
                     }
 
-                    var avg = total / afvals.Count;
+                    var mean = total / afvals.Count;
 
-                    // Calculate the st dev
+                    // Calculate the standard deviation
                     var totalSquareVariance = 0.0;
                     foreach (var afval in afvals)
                     {
-                        totalSquareVariance += Math.Pow(afval.ValueAsDouble() - avg, 2);
+                        totalSquareVariance += Math.Pow(afval.ValueAsDouble() - mean, 2);
                     }
 
-                    var avgSqDev = totalSquareVariance / (double)afvals.Count;
-                    var stdev = Math.Sqrt(avgSqDev);
+                    var meanSqDev = totalSquareVariance / (double)afvals.Count;
+                    var stdev = Math.Sqrt(meanSqDev);
 
                     // Determine the values outside of the boundaries, and remove them
                     var cutoff = stdev * numStDevs;
                     var startingCount = afvals.Count;
 
-                    afvals.RemoveAll(afval => Math.Abs(afval.ValueAsDouble() - avg) > cutoff);
+                    afvals.RemoveAll(afval => Math.Abs(afval.ValueAsDouble() - mean) > cutoff);
 
                     // If no items were removed, output the average and break the loop
                     if (afvals.Count == startingCount)
                     {
-                        context.OutputTag.UpdateValue(new AFValue(avg, triggerTime), AFUpdateOption.Insert);
+                        context.OutputTag.UpdateValue(new AFValue(mean, triggerTime), AFUpdateOption.Insert);
                         break;
                     }
                 }
