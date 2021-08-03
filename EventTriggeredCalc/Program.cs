@@ -17,6 +17,7 @@ namespace EventTriggeredCalc
     public static class Program
     {
         private static Timer _aTimer;
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0044:Add readonly modifier", Justification = "List contents defined in code from settings file")]
         private static List<CalculationContextResolved> _contextListResolved = new List<CalculationContextResolved>();
         private static PIDataPipe _myDataPipe;
         private static int _maxEventsPerPeriod;
@@ -70,6 +71,7 @@ namespace EventTriggeredCalc
 
                 #region step1
                 Console.WriteLine("Resolving PI Data Archive object...");
+
                 PIServer myServer;
 
                 if (string.IsNullOrWhiteSpace(settings.PIDataArchiveName))
@@ -85,6 +87,7 @@ namespace EventTriggeredCalc
 
                 #region step2
                 Console.WriteLine("Resolving input and output PIPoint objects...");
+
                 var subscriptionPIPointList = new List<PIPoint>();
 
                 // Resolve the input and output tag names to PIPoint objects
@@ -111,7 +114,7 @@ namespace EventTriggeredCalc
                             thisResolvedContext.OutputTag.SetAttribute(PICommonPointAttributes.Compressing, 0);
                             thisResolvedContext.OutputTag.SetAttribute(PICommonPointAttributes.PointType, PIPointType.Float64);
                             var errors = thisResolvedContext.OutputTag.SaveAttributes(PICommonPointAttributes.Compressing,
-                                                                                                  PICommonPointAttributes.PointType);
+                                                                                      PICommonPointAttributes.PointType);
 
                             if (errors != null && errors.HasErrors)
                             {
@@ -139,6 +142,7 @@ namespace EventTriggeredCalc
 
                 #region step3
                 Console.WriteLine("Creating a data pipe for snapshot event updates...");
+
                 _myDataPipe = new PIDataPipe(AFDataPipeType.Snapshot);
                 _myDataPipe.AddSignups(subscriptionPIPointList);
 
@@ -146,18 +150,19 @@ namespace EventTriggeredCalc
                 _aTimer = new Timer()
                 {
                     Interval = settings.UpdateCheckIntervalMS,
+                    AutoReset = true,
                 };
                 
                 // Add the calculation to the timer's elapsed trigger event handler list
                 _aTimer.Elapsed += CheckForUpdates;
 
                 // Enable the timer and have it reset on each trigger
-                _aTimer.AutoReset = true;
                 _aTimer.Enabled = true;
                 #endregion // step3
 
                 #region step4
                 Console.WriteLine("Allowing program to run until canceled...");
+
                 await Task.Delay(Timeout.Infinite, token).ConfigureAwait(false);
                 #endregion // step4
             }

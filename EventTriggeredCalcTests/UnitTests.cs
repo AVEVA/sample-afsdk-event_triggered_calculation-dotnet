@@ -148,6 +148,7 @@ namespace EventTriggeredCalcTests
                     source.Dispose();
                 }
 
+                // Confirm that the sample ran cleanly
                 Assert.True(success.Result);
                 #endregion // step4
 

@@ -32,7 +32,8 @@ A [Cancellation Token](https://docs.microsoft.com/en-us/dotnet/api/system.thread
     1. A single [PIDataPipe](https://docs.osisoft.com/bundle/af-sdk/page/html/T_OSIsoft_AF_PI_PIDataPipe.htm) object is used for all input tags
 1. The sample loops until cancelled, doing the following:
     1. Checks for snapshot updates since the last check
-    1. For each update found:
+        1. This operation is done in the background using a [System.Timers.Timer](https://docs.microsoft.com/en-us/dotnet/api/system.timers.timer?view=netframework-4.8) object
+    1. For each snapshot update found:
         1. Determine the output PIPoint corresponding to the update's PIPoint
         1. Execute the calculation for the snapshot update's timestamp
 
