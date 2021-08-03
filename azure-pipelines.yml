@@ -49,9 +49,10 @@ jobs:
           nuget restore
         displayName: 'nuget restore'
 
-      - script: |
-          "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\MSBuild\Current\Bin\MSBuild.exe" EventTriggeredCalc.sln
+      - task: VSBuild@1
         displayName: 'Build solution'
+        inputs: 
+          vsVersion: 16.0
         
       - task: DotNetCoreCLI@2
         displayName: 'Run tests'
