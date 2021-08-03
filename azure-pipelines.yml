@@ -3,17 +3,11 @@ trigger:
   branches:
     include:
       - main
-  paths:
-    include:
-      - '/'
 
 pr:
   branches:
     include:
       - main
-  paths:
-    include:
-      - '/'
 
 schedules:
   - cron: '0 0 * * 0'
@@ -29,7 +23,6 @@ resources:
       type: github
       name: osisoft/OSI-Samples
       endpoint: osisoft/OSI-Samples
-
 
 variables:
   - template: '/miscellaneous/build_templates/variables.yml@templates'
@@ -54,12 +47,10 @@ jobs:
 
       - script: |
           nuget restore
-        workingDirectory: $(Build.SourcesDirectory)
         displayName: 'nuget restore'
 
       - script: |
           "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\MSBuild\Current\Bin\MSBuild.exe" EventTriggeredCalc.sln
-        workingDirectory: $(Build.SourcesDirectory)/
         displayName: 'Build solution'
         
       - task: DotNetCoreCLI@2
@@ -67,8 +58,7 @@ jobs:
         inputs:
           command: test
           publishTestResults: true
-          testRunTitle: '$(Agent.JobName) on $(imageName)'
-          workingDirectory: $(Build.SourcesDirectory)/
+          testRunTitle: '$(Agent.JobName) on $(Agent.OS)'
 
   - job: Analysis
     pool:
@@ -78,12 +68,10 @@ jobs:
     steps:
     - script: |
         nuget restore
-      workingDirectory: $(Build.SourcesDirectory)
       displayName: 'nuget restore'
 
     - template: '/miscellaneous/build_templates/binskim.yml@templates'
-    
+
     - template: '/miscellaneous/build_templates/analysis.yml@templates'
       parameters:
         language: dotnet
-        copyFile: true
