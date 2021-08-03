@@ -27,11 +27,14 @@ namespace EventTriggeredCalc
         /// </summary>
         public static void Main()
         {
+            // Create a cancellation token source in order to cancel the calculation loop on demand
             var source = new CancellationTokenSource();
             var token = source.Token;
 
+            // Launch the sample's main loop, passing it the cancellation token
             var success = MainLoop(token);
 
+            // Pause until the user decides to end the loop
             Console.WriteLine($"Press <ENTER> to end... ");
             Console.ReadLine();
 
@@ -65,25 +68,29 @@ namespace EventTriggeredCalc
                 _maxEventsPerPeriod = settings.MaxEventsPerPeriod;
                 #endregion // configurationSettings
 
-                // Get PI Data Archive object
+                #region step1
+                Console.WriteLine("Resolving PI Data Archive object...");
                 PIServer myServer;
 
                 if (string.IsNullOrWhiteSpace(settings.PIDataArchiveName))
                 {
+                    // Use the default PI Data Archive
                     myServer = PIServers.GetPIServers().DefaultPIServer;
                 }
                 else
                 {
                     myServer = PIServers.GetPIServers()[settings.PIDataArchiveName];
                 }
+                #endregion // step1
 
-                // Keep track of the resolved input PIPoints to sign up for updates
-                List<PIPoint> subscriptionPIPointList = new List<PIPoint>();
+                #region step2
+                Console.WriteLine("Resolving input and output PIPoint objects...");
+                var subscriptionPIPointList = new List<PIPoint>();
 
                 // Resolve the input and output tag names to PIPoint objects
                 foreach (var context in settings.CalculationContexts)
                 {
-                    CalculationContextResolved thisResolvedContext = new CalculationContextResolved();
+                    var thisResolvedContext = new CalculationContextResolved();
 
                     try
                     {
@@ -103,7 +110,7 @@ namespace EventTriggeredCalc
                             // Turn off compression, set to Double, and confirm there were no errors in doing so
                             thisResolvedContext.OutputTag.SetAttribute(PICommonPointAttributes.Compressing, 0);
                             thisResolvedContext.OutputTag.SetAttribute(PICommonPointAttributes.PointType, PIPointType.Float64);
-                            AFErrors<string> errors = thisResolvedContext.OutputTag.SaveAttributes(PICommonPointAttributes.Compressing,
+                            var errors = thisResolvedContext.OutputTag.SaveAttributes(PICommonPointAttributes.Compressing,
                                                                                                   PICommonPointAttributes.PointType);
 
                             if (errors != null && errors.HasErrors)
@@ -128,31 +135,40 @@ namespace EventTriggeredCalc
                         Console.WriteLine($"Input tag {context.InputTagName} will be skipped due to error: {ex.Message}");
                     }
                 }
+                #endregion // step2
 
-                // Create a new data pipe for snapshot events
+                #region step3
+                Console.WriteLine("Creating a data pipe for snapshot event updates...");
                 _myDataPipe = new PIDataPipe(AFDataPipeType.Snapshot);
                 _myDataPipe.AddSignups(subscriptionPIPointList);
 
                 // Create a timer with the specified interval of checking for updates
-                _aTimer = new Timer();
-                _aTimer.Interval = settings.UpdateCheckIntervalMS;
-
+                _aTimer = new Timer()
+                {
+                    Interval = settings.UpdateCheckIntervalMS,
+                };
+                
                 // Add the calculation to the timer's elapsed trigger event handler list
                 _aTimer.Elapsed += CheckForUpdates;
 
                 // Enable the timer and have it reset on each trigger
                 _aTimer.AutoReset = true;
                 _aTimer.Enabled = true;
+                #endregion // step3
 
-                // Allow the program to run indefinitely until canceled
-                await Task.Delay(Timeout.Infinite, token).ConfigureAwait(false);                
+                #region step4
+                Console.WriteLine("Allowing program to run until canceled...");
+                await Task.Delay(Timeout.Infinite, token).ConfigureAwait(false);
+                #endregion // step4
             }
             catch (TaskCanceledException)
             {
+                // Task cancellation is done via exception but shouldn't denote a failure
                 Console.WriteLine("Task canceled successfully");
             }
             catch (Exception ex)
             {
+                // All other exceptions should be treated as a failure
                 Console.WriteLine(ex);
                 _toThrow = ex;
                 throw;

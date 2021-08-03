@@ -21,14 +21,17 @@ namespace EventTriggeredCalcTests
             int numValsToWrite = 3;
             var timesWrittenTo = new List<DateTime>();
             var errorThreshold = new TimeSpan(0, 0, 0, 0, 1); // 1 ms time max error is acceptable due to floating point error
-
+            
             try
             {
-                // Read in settings file from other folder
+                #region configurationSettings
                 string solutionFolderName = Directory.GetParent(Directory.GetCurrentDirectory()).Parent.Parent.FullName;
                 AppSettings settings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(solutionFolderName + "/EventTriggeredCalc/appsettings.json"));
+                #endregion // configurationSettings
 
-                // Connect to PI Data Archive
+                #region step1
+                Console.WriteLine("TEST: Resolving PI Data Archive object...");
+
                 PIServer myServer;
 
                 if (string.IsNullOrWhiteSpace(settings.PIDataArchiveName))
@@ -39,8 +42,11 @@ namespace EventTriggeredCalcTests
                 {
                     myServer = PIServers.GetPIServers()[settings.PIDataArchiveName];
                 }
+                #endregion // step1
 
-                // For each context pair, check that the input tag and output do not already exist, and create them
+                #region step2
+                Console.WriteLine("TEST: Resolving input and output PIPoint objects...");
+
                 var contextListResolved = new List<CalculationContextResolvedTest>();
 
                 foreach (var context in settings.CalculationContexts)
@@ -100,14 +106,20 @@ namespace EventTriggeredCalcTests
                         Assert.True(false, ex.Message);
                     }
                 }
+                #endregion // step2
 
-                // Run MainLoop
+                #region step3
+                Console.WriteLine("TEST: Calling main sample...");
+
                 var source = new CancellationTokenSource();
                 var token = source.Token;
 
                 var success = Program.MainLoop(token);
+                #endregion // step3
 
-                // Write three values to each input test tag
+                #region step4
+                Console.WriteLine("TEST: Writing values to input tags...");
+                
                 for (int i = 0; i < numValsToWrite; ++i)
                 {
                     DateTime currentTime = DateTime.Now;
@@ -119,15 +131,15 @@ namespace EventTriggeredCalcTests
                     }
 
                     // Pause for a second to separate the values
-                    Thread.Sleep(500);
+                    Thread.Sleep(1 * 1000);
                 }
 
                 // Pause to give the calculations enough time to complete
-                Thread.Sleep(15 * 1000);
+                Thread.Sleep(settings.UpdateCheckIntervalMS * 2);
 
-                // Cancel the operation and pause to ensure it's heard
+                // Cancel the operation and wait for the sample to clean up
                 source.Cancel();
-                Thread.Sleep(1 * 1000);
+                var outcome = success.Result;
 
                 // Dispose of the cancellation token source
                 if (source != null)
@@ -136,10 +148,12 @@ namespace EventTriggeredCalcTests
                     source.Dispose();
                 }
 
-                // Confirm that the sample ran cleanly
                 Assert.True(success.Result);
+                #endregion // step4
 
-                // Check that output tags have three values each
+                #region step5
+                Console.WriteLine("TEST: Checking the output tag values...");
+
                 foreach (var context in contextListResolved)
                 {
                     // First, resolve the output tag to ensure the sample created it successfully
@@ -171,13 +185,17 @@ namespace EventTriggeredCalcTests
                             $"expected value of {timesWrittenTo[numValsToWrite - 1 - i]} by more than acceptable error of {errorThreshold}");
                     }
                 }
+                #endregion // step5
 
-                // Delete the output and intput test tags
+                #region step6
+                Console.WriteLine("TEST: Cleaning up...");
+                
                 foreach (var context in contextListResolved)
                 {
                     myServer.DeletePIPoint(context.InputTag.Name);
                     myServer.DeletePIPoint(context.OutputTag.Name);
                 }
+                #endregion // step6
             }
             catch (Exception ex)
             {
