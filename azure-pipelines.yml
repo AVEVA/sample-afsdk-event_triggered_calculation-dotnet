@@ -1,0 +1,82 @@
+trigger:
+  batch: true
+  branches:
+    include:
+      - main
+
+pr:
+  branches:
+    include:
+      - main
+
+schedules:
+  - cron: '0 0 * * 0'
+    displayName: Weekly build
+    branches:
+      include:
+        - main
+    always: true
+
+resources:
+  repositories:
+    - repository: templates
+      type: github
+      name: osisoft/OSI-Samples
+      endpoint: osisoft/OSI-Samples
+
+variables:
+  - template: '/miscellaneous/build_templates/variables.yml@templates'
+  - name: CredFile
+    value: appsettings.json
+  - name: CredFileLibrary
+    value: product-readiness.afsdk_custom_calc_event_dotnet.json
+  - name: analysisProject
+    value: PI_AFSDKCustomCalcEvent_DotNet
+
+jobs:
+  - job: Tests
+    pool:
+      name: 00-OSIManaged-Test
+      demands: COMPUTERNAME -equals $(buildAgent)
+    steps:
+      - template: '/miscellaneous/build_templates/config.yml@templates'
+        parameters:
+          fileOriginal: $(CredFile)
+          fileLibrary: $(CredFileLibrary)
+          filePath: /EventTriggeredCalc
+
+      - task: NuGetCommand@2
+        displayName: 'nuget restore'
+        inputs:
+          command: 'restore'
+          restoreSolution: '**/*.sln'
+
+      - task: VSBuild@1
+        displayName: 'Build solution'
+        inputs: 
+          vsVersion: 16.0
+        
+      - task: DotNetCoreCLI@2
+        displayName: 'Run tests'
+        inputs:
+          command: test
+          publishTestResults: true
+          testRunTitle: '$(Agent.JobName) on $(Agent.OS)'
+
+  - job: Analysis
+    pool:
+      name: 00-OSIManaged-Test
+      demands: COMPUTERNAME -equals $(buildAgent)
+
+    steps:
+    - task: NuGetCommand@2
+      displayName: 'nuget restore'
+      inputs:
+        command: 'restore'
+        restoreSolution: '**/*.sln'
+
+    - template: '/miscellaneous/build_templates/binskim.yml@templates'
+
+    - template: '/miscellaneous/build_templates/analysis.yml@templates'
+      parameters:
+        language: dotnet
