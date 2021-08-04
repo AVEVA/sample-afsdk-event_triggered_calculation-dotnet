@@ -131,7 +131,7 @@ namespace EventTriggeredCalcTests
                     }
 
                     // Pause for a second to separate the values
-                    Thread.Sleep(1 * 1000);
+                    Thread.Sleep(1000);
                 }
 
                 // Pause to give the calculations enough time to complete
