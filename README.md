@@ -23,7 +23,7 @@ A [Cancellation Token](https://docs.microsoft.com/en-us/dotnet/api/system.thread
 1. A connection is made to the named Data Archive
     1. If blank, it will use the default Data Archive
     1. The connection is made implicitly under the identity of the account executing the code
-1. For each pair of input and output tag names:
+1. For each pair of input* and output tag names:
     1. The input tag name is resolved to a PIPoint object
     1. The output tag name is resolved to a PIPoint, or is created if it does not exist
     1. The pair of input and output PIPoint objects are added to the application's list of [resolved calcuation contexts](EventTriggeredCalc\CalculationContextResolved.cs).
@@ -36,6 +36,8 @@ A [Cancellation Token](https://docs.microsoft.com/en-us/dotnet/api/system.thread
     1. For each snapshot update found:
         1. Determine the output PIPoint corresponding to the update's PIPoint
         1. Execute the calculation for the snapshot update's timestamp
+
+*Note: The sample uses a single input tag, but this could be expanded to multiple input tags by adding properties to the [CalculationContext.cs](EventTriggeredCalc\CalculationContext.cs) and [CalculationContextResolved.cs](EventTriggeredCalc\CalculationContextResolved.cs) classes, the [appsettings.json](EventTriggeredCalc\appsettings.placeholder.json) file, incorporating the additional input tag(s) into the [PerformCalculation](EventTriggeredCalc\Program.cs) function logic, and optionally adding the additional input tags to the datapipe object so that multiple input tags will all trigger new calculations to execute. Since the sample uses a `context` and not simply an input tag, it should be architected in such a way to easily allow multiple input tags if desired.
 
 The calculation logic itself is not the main purpose of the sample, but it demonstrates a complex, conditional, looping calculation that is beyond the functionality of Asset Analytics.
 
