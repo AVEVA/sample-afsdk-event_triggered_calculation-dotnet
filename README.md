@@ -16,7 +16,7 @@ Previously, this use case was handled by either PI Advanced Computing Engine (AC
 
 ## Calculation Work Flow
 
-The sample code is intended to provide a starting point that matches the feel of an event-triggered ACE calculation executing on snapshot updates of the input tag. To demonstrate scalability by reusing the same calculation logic for a large number of calculations, any number of pairs of input and output tag names can be specified in [appsettings.json](EventTriggeredCalc\appsettings.placeholder.json); the calculation will subscribe to each input tag's snapshot updates, execute the calculation against the input tag whose snapshot value has updated, and write to the corresponding output tag.
+The sample code is intended to provide a starting point that matches the feel of an event-triggered ACE calculation executing on snapshot updates of the input tag. To demonstrate scalability by reusing the same calculation logic for a large number of calculations, any number of pairs of input and output tag names can be specified in [appsettings.json](EventTriggeredCalc/appsettings.placeholder.json); the calculation will subscribe to each input tag's snapshot updates, execute the calculation against the input tag whose snapshot value has updated, and write to the corresponding output tag.
 
 A [Cancellation Token](https://docs.microsoft.com/en-us/dotnet/api/system.threading.cancellationtoken?view=netframework-4.8) is used to end the calculation loop so that it can run indefinitely but be cancelled on demand. In this sample, the cancellation occurs when the user hits `ENTER`, but this is a demonstration of how to cancel the operation gracefully.
 
@@ -26,7 +26,7 @@ A [Cancellation Token](https://docs.microsoft.com/en-us/dotnet/api/system.thread
 1. For each pair of input* and output tag names:
     1. The input tag name is resolved to a PIPoint object
     1. The output tag name is resolved to a PIPoint, or is created if it does not exist
-    1. The pair of input and output PIPoint objects are added to the application's list of [resolved calcuation contexts](EventTriggeredCalc\CalculationContextResolved.cs).
+    1. The pair of input and output PIPoint objects are added to the application's list of [resolved calcuation contexts](EventTriggeredCalc/CalculationContextResolved.cs).
     1. If either PIPoint object could not be resolved, a warning is outputted to the console and the application moves on to the next pair. This allows the application to work against all resolvable contexts.
 1. Snapshot updates are subscribed to for all input tags
     1. A single [PIDataPipe](https://docs.osisoft.com/bundle/af-sdk/page/html/T_OSIsoft_AF_PI_PIDataPipe.htm) object is used for all input tags
@@ -37,7 +37,7 @@ A [Cancellation Token](https://docs.microsoft.com/en-us/dotnet/api/system.thread
         1. Determine the output PIPoint corresponding to the update's PIPoint
         1. Execute the calculation for the snapshot update's timestamp
 
-*Note: The sample uses a single input tag, but this could be expanded to multiple input tags by adding properties to the [CalculationContext.cs](EventTriggeredCalc\CalculationContext.cs) and [CalculationContextResolved.cs](EventTriggeredCalc\CalculationContextResolved.cs) classes, the [appsettings.json](EventTriggeredCalc\appsettings.placeholder.json) file, incorporating the additional input tag(s) into the [PerformCalculation](EventTriggeredCalc\Program.cs) function logic, and optionally adding the additional input tags to the datapipe object so that multiple input tags will all trigger new calculations to execute. Since the sample uses a `context` and not simply an input tag, it should be architected in such a way to easily allow multiple input tags if desired.
+*Note: The sample uses a single input tag, but this could be expanded to multiple input tags by adding properties to the [CalculationContext.cs](EventTriggeredCalc/CalculationContext.cs) and [CalculationContextResolved.cs](EventTriggeredCalc/CalculationContextResolved.cs) classes, the [appsettings.json](EventTriggeredCalc/appsettings.placeholder.json) file, incorporating the additional input tag(s) into the [PerformCalculation](EventTriggeredCalc/Program.cs) function logic, and optionally adding the additional input tags to the datapipe object so that multiple input tags will all trigger new calculations to execute. Since the sample uses a `context` and not simply an input tag, it should be architected in such a way to easily allow multiple input tags if desired.
 
 The calculation logic itself is not the main purpose of the sample, but it demonstrates a complex, conditional, looping calculation that is beyond the functionality of Asset Analytics.
 
@@ -60,7 +60,7 @@ Note: This sample uses `AF SDK 2.10.9` and `.NET Framework 4.8`. Older versions 
 
 ## Getting Started
 
-The sample is configured using the file [appsettings.placeholder.json](EventTriggeredCalc\appsettings.placeholder.json). Before editing, rename this file to `appsettings.json`. This repository's `.gitignore` rules should prevent the file from ever being checked in to any fork or branch.
+The sample is configured using the file [appsettings.placeholder.json](EventTriggeredCalc/appsettings.placeholder.json). Before editing, rename this file to `appsettings.json`. This repository's `.gitignore` rules should prevent the file from ever being checked in to any fork or branch.
 
 ```json
 {
@@ -83,7 +83,7 @@ The sample is configured using the file [appsettings.placeholder.json](EventTrig
 The sample uses an implicit connection to the PI Data Archive under the context of the account running the application. For guidance on using an explicit connection, see the [Connecting to a PI Data Archive AF SDK reference](https://docs.osisoft.com/bundle/af-sdk/page/html/connecting-to-a-pi-data-archive.htm).
 
 1. Clone the sample repository to a local folder
-1. In the EventTriggeredCalc directory, create appsettings.json from [appsettings.placeholder.json](EventTriggeredCalc\appsettings.placeholder.json) and edit the configuration as necessary
+1. In the EventTriggeredCalc directory, create appsettings.json from [appsettings.placeholder.json](EventTriggeredCalc/appsettings.placeholder.json) and edit the configuration as necessary
 1. Build and run the solution using Visual Studio or using cmd
     ```shell
     nuget restore
@@ -95,7 +95,7 @@ The sample uses an implicit connection to the PI Data Archive under the context 
 
 ## Running the Automated Test
 
-The test in [EventTriggeredCalcTests](EventTriggeredCalcTests\UnitTests.cs) tests the sample's purpose of providing a framework for calculations to loop indefinitely on snapshot updates by doing the following:
+The test in [EventTriggeredCalcTests](EventTriggeredCalcTests/UnitTests.cs) tests the sample's purpose of providing a framework for calculations to loop indefinitely on snapshot updates by doing the following:
 1. Connect to the specified PI Data Archive
 1. For each pair of input and output tag names:
     1. Confirm that the input tag does not already exist. The test will be writing to the input tag then deleting it, so an existing tag should not be used.
