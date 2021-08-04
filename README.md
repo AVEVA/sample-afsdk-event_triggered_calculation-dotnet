@@ -62,13 +62,13 @@ The sample is configured using the file [appsettings.placeholder.json](EventTrig
 
 ```json
 {
-  "PIDataArchive": "",
-  "UpdateCheckIntervalMS": 5000,
-  "MaxEventsPerPeriod": 10,
-  "CalculationContexts": [
+  "PIDataArchive": "",            // Leave blank to use the machine's default PI Data Archive
+  "UpdateCheckIntervalMS": 5000,  // How often to check the update queue for updates, in ms
+  "MaxEventsPerPeriod": 10,       // Max number of updates to retrieve per update check
+  "CalculationContexts": [        // Array of pairs of input and output tags
     {
-      "InputTagName": "input1",
-      "OutputTagName": "output1"
+      "InputTagName": "input1",   // The tag whose existing data is read in for the calculation
+      "OutputTagName": "output1"  // The tag that is written to for the output of the calculation
     },
     {
       "InputTagName": "input2",
