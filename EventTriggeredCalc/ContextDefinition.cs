@@ -1,17 +1,17 @@
-﻿using OSIsoft.AF.PI;
+﻿using System.Collections.Generic;
 
 namespace EventTriggeredCalc
 {
-    public class CalculationContextResolved
+    public class ContextDefinition
     {
         /// <summary>
         /// The input tag used in the calculation
         /// </summary>
-        public PIPoint InputTag { get; set; }
+        public List<UnresolvedInput> Inputs { get; }
 
         /// <summary>
         /// The output tag that the calculation output is written to
         /// </summary>
-        public PIPoint OutputTag { get; set; }
+        public string OutputAttributeName { get; set; }
     }
 }

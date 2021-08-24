@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
+using OSIsoft.AF;
 using OSIsoft.AF.Asset;
 using OSIsoft.AF.Data;
 using OSIsoft.AF.PI;
@@ -15,9 +16,9 @@ namespace EventTriggeredCalc
 {
     public static class Program
     {
-        private static readonly List<CalculationContextResolved> _contextListResolved = new List<CalculationContextResolved>();
+        private static readonly List<Context> _contextList = new List<Context>();
         private static Timer _aTimer;
-        private static PIDataPipe _myDataPipe;
+        private static AFDataCache _myAFDataCache;
         private static int _maxEventsPerPeriod;
         private static Exception _toThrow;
 
@@ -68,72 +69,87 @@ namespace EventTriggeredCalc
                 #endregion // configurationSettings
 
                 #region step1
-                Console.WriteLine("Resolving PI Data Archive object...");
+                Console.WriteLine("Resolving AF Server object...");
 
-                PIServer myServer;
+                var myPISystems = new PISystems();
+                PISystem myPISystem;
 
-                if (string.IsNullOrWhiteSpace(settings.PIDataArchiveName))
+                if (string.IsNullOrWhiteSpace(settings.AFServerName))
                 {
                     // Use the default PI Data Archive
-                    myServer = PIServers.GetPIServers().DefaultPIServer;
+                    myPISystem = myPISystems.DefaultPISystem;
                 }
                 else
                 {
-                    myServer = PIServers.GetPIServers()[settings.PIDataArchiveName];
+                    myPISystem = myPISystems[settings.AFServerName];
+                }
+
+                Console.WriteLine("Resolving AF Database object...");
+                
+                AFDatabase myAFDB;
+
+                if (string.IsNullOrWhiteSpace(settings.AFDatabaseName))
+                {
+                    // Use the default PI Data Archive
+                    myAFDB = myPISystem.Databases.DefaultDatabase;
+                }
+                else
+                {
+                    myAFDB = myPISystem.Databases[settings.AFDatabaseName];
                 }
                 #endregion // step1
 
                 #region step2
                 Console.WriteLine("Resolving input and output PIPoint objects...");
 
-                var subscriptionPIPointList = new List<PIPoint>();
+                var attributeTriggerList = new List<AFAttribute>();
 
                 // Resolve the input and output tag names to PIPoint objects
-                foreach (var context in settings.CalculationContexts)
+                foreach (var context in settings.Contexts)
                 {
-                    var thisResolvedContext = new CalculationContextResolved();
+                    var thisResolvedContext = new Context();
 
                     try
                     {
-                        // Resolve the input PIPoint object from its name
-                        thisResolvedContext.InputTag = PIPoint.FindPIPoint(myServer, context.InputTagName);
+                        // Resolve the element from its name
+                        thisResolvedContext.Element = myAFDB.Elements[context];
 
-                        try
+                        // Make a list of input triggers to ensure a failed context doesn't later trigger a calculation
+                        var thisAttributeTriggerList = new List<AFAttribute>();
+
+                        // Resolve each input attribute
+                        foreach (var input in settings.ContextDefinition.Inputs)
                         {
-                            // Try to resolve the output PIPoint object from its name
-                            thisResolvedContext.OutputTag = PIPoint.FindPIPoint(myServer, context.OutputTagName);
-                        }
-                        catch (PIPointInvalidException)
-                        {
-                            // If it does not exist, create it
-                            thisResolvedContext.OutputTag = myServer.CreatePIPoint(context.OutputTagName);
+                            var thisResolvedInput = new Input();
 
-                            // Turn off compression, set to Double, and confirm there were no errors in doing so
-                            thisResolvedContext.OutputTag.SetAttribute(PICommonPointAttributes.Compressing, 0);
-                            thisResolvedContext.OutputTag.SetAttribute(PICommonPointAttributes.PointType, PIPointType.Float64);
-                            var errors = thisResolvedContext.OutputTag.SaveAttributes(PICommonPointAttributes.Compressing,
-                                                                                      PICommonPointAttributes.PointType);
+                            // Find the attribute
+                            thisResolvedInput.Attribute = thisResolvedContext.Element.Attributes[input.AttributeName];
 
-                            if (errors != null && errors.HasErrors)
+                            // Add it to the trigger list if specified
+                            if (input.IsTrigger)
                             {
-                                Console.WriteLine("Errors calling PIPoint.SaveAttributes:");
-                                foreach (var item in errors.Errors)
-                                {
-                                    Console.WriteLine($"  {item.Key}: {item.Value}");
-                                }
-
-                                throw new Exception("Error saving Output PIPoint configuration changes");
+                                thisAttributeTriggerList.Add(thisResolvedInput.Attribute);
                             }
+
+                            // Add it to the list of input attributes in the resolved context
+                            thisResolvedContext.Inputs.Add(thisResolvedInput);
                         }
+
+                        // Resolve the output attribute
+                        thisResolvedContext.OutputAttribute = thisResolvedContext.Element.Attributes[settings.ContextDefinition.OutputAttributeName];
 
                         // If successful, add to the list of resolved contexts and the snapshot update subscription list
-                        _contextListResolved.Add(thisResolvedContext);
-                        subscriptionPIPointList.Add(thisResolvedContext.InputTag);
+                        _contextList.Add(thisResolvedContext);
+
+                        foreach (var attribute in thisAttributeTriggerList)
+                        {
+                            attributeTriggerList.Add(attribute);
+                        }
                     }
                     catch (Exception ex)
                     {
                         // If not successful, inform the user and move on to the next pair
-                        Console.WriteLine($"Input tag {context.InputTagName} will be skipped due to error: {ex.Message}");
+                        Console.WriteLine($"Context {context} will be skipped due to error: {ex.Message}");
                     }
                 }
                 #endregion // step2
@@ -141,8 +157,8 @@ namespace EventTriggeredCalc
                 #region step3
                 Console.WriteLine("Creating a data pipe for snapshot event updates...");
 
-                _myDataPipe = new PIDataPipe(AFDataPipeType.Snapshot);
-                _myDataPipe.AddSignups(subscriptionPIPointList);
+                _myAFDataCache = new AFDataCache();
+                _myAFDataCache.Add(attributeTriggerList);
 
                 // Create a timer with the specified interval of checking for updates
                 _aTimer = new Timer()
@@ -185,10 +201,10 @@ namespace EventTriggeredCalc
                     _aTimer.Dispose();
                 }
 
-                if (_myDataPipe != null)
+                if (_myAFDataCache != null)
                 {
                     Console.WriteLine("Disposing data pipe...");
-                    _myDataPipe.Dispose();
+                    _myAFDataCache.Dispose();
                 }
             }
 
@@ -204,7 +220,7 @@ namespace EventTriggeredCalc
         private static void CheckForUpdates(object source, ElapsedEventArgs e)
         {
             // Get events that have occurred since the last check
-            var myResults = _myDataPipe.GetUpdateEvents(_maxEventsPerPeriod);
+            var myResults = _myAFDataCache.GetUpdateEvents(_maxEventsPerPeriod);
 
             foreach (var mySnapshotEvent in myResults.Results)
             {
@@ -213,7 +229,7 @@ namespace EventTriggeredCalc
                     mySnapshotEvent.Action == AFDataPipeAction.Update)
                 {
                     // Find the associated calculation context in order to obtain this update's corresponding output PIPoint
-                    var thisContext = _contextListResolved.Single(context => context.InputTag == mySnapshotEvent.Value.PIPoint);
+                    var thisContext = _contextList.Single(context => context. == mySnapshotEvent.Value.PIPoint);
 
                     // Trigger the calculation against this snapshot event
                     PerformCalculation(mySnapshotEvent.Value.Timestamp, thisContext);
@@ -225,14 +241,14 @@ namespace EventTriggeredCalc
         /// This function performs the calculation and writes the value to the output tag
         /// <param name="triggerTime">The timestamp to perform the calculation against</param>
         /// <param name="context">The context on which to perform this calculation</param>
-        private static void PerformCalculation(DateTime triggerTime, CalculationContextResolved context)
+        private static void PerformCalculation(DateTime triggerTime, Context context)
         {
             // Configuration
             var numValues = 100;  // number of values to find the average of
             var numStDevs = 1.75; // number of standard deviations of variance to allow
             
             // Obtain the recent values from the trigger timestamp
-            var afvals = context.InputTag.RecordedValuesByCount(triggerTime, numValues, false, AFBoundaryType.Interpolated, null, false);
+            var afvals = context.Inputs[0].Attribute.Data.RecordedValuesByCount(triggerTime, numValues, false, AFBoundaryType.Interpolated, null, string.Empty, false);
 
             // Remove bad values
             afvals.RemoveAll(afval => !afval.IsGood);
@@ -271,7 +287,7 @@ namespace EventTriggeredCalc
                     // If no items were removed, output the average and break the loop
                     if (afvals.Count == startingCount)
                     {
-                        context.OutputTag.UpdateValue(new AFValue(mean, triggerTime), AFUpdateOption.Insert);
+                        context.OutputAttribute.Data.UpdateValue(new AFValue(mean, triggerTime), AFUpdateOption.Insert);
                         break;
                     }
                 }

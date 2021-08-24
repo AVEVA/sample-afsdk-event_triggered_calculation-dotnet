@@ -126,8 +126,10 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AppSettings.cs" />
-    <Compile Include="CalculationContext.cs" />
-    <Compile Include="CalculationContextResolved.cs" />
+    <Compile Include="ContextDefinition.cs" />
+    <Compile Include="UnresolvedInput.cs" />
+    <Compile Include="Input.cs" />
+    <Compile Include="Context.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

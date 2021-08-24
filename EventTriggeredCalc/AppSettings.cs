@@ -7,14 +7,21 @@ namespace EventTriggeredCalc
         /// <summary>
         /// The unresolved list of input and output tag names for the calculation to run against
         /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2227:Collection properties should be read only", Justification = "Allow in configuration, reading from file")]
-        public IList<CalculationContext> CalculationContexts { get; set; }
+        public ContextDefinition ContextDefinition { get; }
+
+        public List<string> Contexts { get; }
 
         /// <summary>
-        /// The name of the PI Data Archive to use
-        /// An empty string will resolve to the Default PI Data Archive
+        /// The name of the AF Server to use
+        /// An empty string will resolve to the Default AF Server
         /// </summary>
-        public string PIDataArchiveName { get; set; }
+        public string AFServerName { get; set; }
+
+        /// <summary>
+        /// The name of the AF Database to use
+        /// An empty string will resolve to the Default AF Database
+        /// </summary>
+        public string AFDatabaseName { get; set; }
 
         /// <summary>
         /// The interval that the timer triggers the checking of snapshot updates, in ms
