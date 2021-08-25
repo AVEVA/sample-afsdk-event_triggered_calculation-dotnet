@@ -5,20 +5,20 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Timers;
 using OSIsoft.AF;
 using OSIsoft.AF.Asset;
 using OSIsoft.AF.Data;
-using OSIsoft.AF.PI;
-using Timer = System.Timers.Timer;
+using OSIsoft.AF.UnitsOfMeasure;
 
 namespace EventTriggeredCalc
 {
     public static class Program
     {
-        private static readonly List<Context> _contextList = new List<Context>();
-        private static Timer _aTimer;
         private static AFDataCache _myAFDataCache;
+        private static AFKeyedResults<AFAttribute, AFData> _dataCaches;
+        private static AFDataPipeEventObserver _observer;
+        private static IDisposable _unsubscriber;
+        private static IList<string> _triggerAttributeList;
         private static int _maxEventsPerPeriod;
         private static Exception _toThrow;
 
@@ -64,7 +64,7 @@ namespace EventTriggeredCalc
             {
                 #region configurationSettings
                 AppSettings settings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(Directory.GetCurrentDirectory() + "/appsettings.json"));
-
+                _triggerAttributeList = settings.TriggerAttributes;
                 _maxEventsPerPeriod = settings.MaxEventsPerPeriod;
                 #endregion // configurationSettings
 
@@ -102,49 +102,27 @@ namespace EventTriggeredCalc
                 #region step2
                 Console.WriteLine("Resolving input and output PIPoint objects...");
 
-                var attributeTriggerList = new List<AFAttribute>();
+                var attributeCacheList = new List<AFAttribute>();
 
                 // Resolve the input and output tag names to PIPoint objects
                 foreach (var context in settings.Contexts)
                 {
-                    var thisResolvedContext = new Context();
-
                     try
                     {
                         // Resolve the element from its name
-                        thisResolvedContext.Element = myAFDB.Elements[context];
+                        var thisElement = myAFDB.Elements[context];
 
-                        // Make a list of input triggers to ensure a failed context doesn't later trigger a calculation
-                        var thisAttributeTriggerList = new List<AFAttribute>();
+                        // Make a list of inputs to ensure a partially failed context resolution doesn't add to the data cache
+                        var thisattributeCacheList = new List<AFAttribute>();
 
                         // Resolve each input attribute
-                        foreach (var input in settings.ContextDefinition.Inputs)
+                        foreach (var input in settings.Inputs)
                         {
-                            var thisResolvedInput = new Input();
-
-                            // Find the attribute
-                            thisResolvedInput.Attribute = thisResolvedContext.Element.Attributes[input.AttributeName];
-
-                            // Add it to the trigger list if specified
-                            if (input.IsTrigger)
-                            {
-                                thisAttributeTriggerList.Add(thisResolvedInput.Attribute);
-                            }
-
-                            // Add it to the list of input attributes in the resolved context
-                            thisResolvedContext.Inputs.Add(thisResolvedInput);
+                            thisattributeCacheList.Add(thisElement.Attributes[input]);
                         }
 
-                        // Resolve the output attribute
-                        thisResolvedContext.OutputAttribute = thisResolvedContext.Element.Attributes[settings.ContextDefinition.OutputAttributeName];
-
-                        // If successful, add to the list of resolved contexts and the snapshot update subscription list
-                        _contextList.Add(thisResolvedContext);
-
-                        foreach (var attribute in thisAttributeTriggerList)
-                        {
-                            attributeTriggerList.Add(attribute);
-                        }
+                        // If successful, add to the list of resolved attributes to the data cache list
+                        attributeCacheList.AddRange(thisattributeCacheList);
                     }
                     catch (Exception ex)
                     {
@@ -155,23 +133,13 @@ namespace EventTriggeredCalc
                 #endregion // step2
 
                 #region step3
-                Console.WriteLine("Creating a data pipe for snapshot event updates...");
+                Console.WriteLine("Creating a data cache for snapshot event updates...");
 
                 _myAFDataCache = new AFDataCache();
-                _myAFDataCache.Add(attributeTriggerList);
-
-                // Create a timer with the specified interval of checking for updates
-                _aTimer = new Timer()
-                {
-                    Interval = settings.UpdateCheckIntervalMS,
-                    AutoReset = true,
-                };
-                
-                // Add the calculation to the timer's elapsed trigger event handler list
-                _aTimer.Elapsed += CheckForUpdates;
-
-                // Enable the timer and have it reset on each trigger
-                _aTimer.Enabled = true;
+                _dataCaches = _myAFDataCache.Add(attributeCacheList);
+                _myAFDataCache.CacheTimeSpan = new TimeSpan(settings.CacheTimeSpanSeconds * TimeSpan.TicksPerSecond);
+                _observer = new AFDataPipeEventObserver();
+                _unsubscriber = _myAFDataCache.Subscribe(_observer);
                 #endregion // step3
 
                 #region step4
@@ -194,17 +162,30 @@ namespace EventTriggeredCalc
             }
             finally
             {
-                // Dispose the timer and data pipe objects then quit
-                if (_aTimer != null)
+                try
                 {
-                    Console.WriteLine("Disposing timer...");
-                    _aTimer.Dispose();
+                    if (_unsubscriber != null)
+                    {
+                        Console.WriteLine("Disposing AF Data Cache observer...");
+                        _unsubscriber.Dispose();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Failed to dispose observer object. Error: {ex.Message}");
                 }
 
-                if (_myAFDataCache != null)
+                try
                 {
-                    Console.WriteLine("Disposing data pipe...");
-                    _myAFDataCache.Dispose();
+                    if (_myAFDataCache != null)
+                    {
+                        Console.WriteLine("Disposing AF Data Cache...");
+                        _myAFDataCache.Dispose();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Failed to dispose data cache object. Error: {ex.Message}");
                 }
             }
 
@@ -212,28 +193,16 @@ namespace EventTriggeredCalc
             return _toThrow == null;
         }
 
-        /// <summary>
-        /// This function checks for snapshot updates and triggers the calculations against them
-        /// </summary>
-        /// <param name="source">The source of the event</param>
-        /// <param name="e">An ElapsedEventArgs object that contains the event data</param>
-        private static void CheckForUpdates(object source, ElapsedEventArgs e)
+        public static void ProcessUpdate(AFDataPipeEvent thisEvent)
         {
-            // Get events that have occurred since the last check
-            var myResults = _myAFDataCache.GetUpdateEvents(_maxEventsPerPeriod);
-
-            foreach (var mySnapshotEvent in myResults.Results)
+            if (thisEvent == null)
             {
-                // If the event was added or updated in the snapshot...
-                if (mySnapshotEvent.Action == AFDataPipeAction.Add ||
-                    mySnapshotEvent.Action == AFDataPipeAction.Update)
-                {
-                    // Find the associated calculation context in order to obtain this update's corresponding output PIPoint
-                    var thisContext = _contextList.Single(context => context. == mySnapshotEvent.Value.PIPoint);
+                throw new ArgumentNullException(nameof(thisEvent));
+            }
 
-                    // Trigger the calculation against this snapshot event
-                    PerformCalculation(mySnapshotEvent.Value.Timestamp, thisContext);
-                }
+            if (_triggerAttributeList.Contains(thisEvent.Value.Attribute.Name))
+            {
+                PerformCalculation(thisEvent.Value.Timestamp, (AFElement)thisEvent.Value.Attribute.Element);
             }
         }
 
@@ -241,19 +210,42 @@ namespace EventTriggeredCalc
         /// This function performs the calculation and writes the value to the output tag
         /// <param name="triggerTime">The timestamp to perform the calculation against</param>
         /// <param name="context">The context on which to perform this calculation</param>
-        private static void PerformCalculation(DateTime triggerTime, Context context)
+        private static void PerformCalculation(DateTime triggerTime, AFElement context)
         {
             // Configuration
             var numValues = 100;  // number of values to find the average of
+            var forward = false;
+            UOM tempUom = null;
+            UOM pressUom = null;
+            UOM volUom = null;
+            var filterExpression = string.Empty;
+            var includeFilteredValues = false;
+
             var numStDevs = 1.75; // number of standard deviations of variance to allow
             
             // Obtain the recent values from the trigger timestamp
-            var afvals = context.Inputs[0].Attribute.Data.RecordedValuesByCount(triggerTime, numValues, false, AFBoundaryType.Interpolated, null, string.Empty, false);
+            var afTempVals = context.Attributes["Temperature"].Data.RecordedValuesByCount(triggerTime, numValues, forward, AFBoundaryType.Interpolated, tempUom, filterExpression, includeFilteredValues);
+            var afPressVals = context.Attributes["Pressure"].Data.RecordedValuesByCount(triggerTime, numValues, forward, AFBoundaryType.Interpolated, pressUom, filterExpression, includeFilteredValues);
+            var afVolumeVal = context.Attributes["Volume"].Data.EndOfStream(volUom);
 
             // Remove bad values
-            afvals.RemoveAll(afval => !afval.IsGood);
+            afTempVals.RemoveAll(afval => !afval.IsGood);
+            afPressVals.RemoveAll(afval => !afval.IsGood);
 
-            // Loop until no new values were eliminated for being outside of the boundaries
+            // Iteratively solve for the trimmed mean of temperature and pressure
+            var meanTemp = GetTrimmedMean(afTempVals, numStDevs);
+            var meanPressure = GetTrimmedMean(afPressVals, numStDevs);
+
+            // Apply the Ideal Gas Law (PV = nRT) to solve for number of moles
+            var gasConstant = 1.0; // UOMs are important here!
+            var n = meanPressure * afVolumeVal.ValueAsDouble() / (gasConstant * meanTemp);
+
+            // write to output attribute.
+            context.Attributes["Result"].Data.UpdateValue(new AFValue(n, triggerTime), AFUpdateOption.Insert);
+        }
+
+        private static double GetTrimmedMean(AFValues afvals, double numberOfStandardDeviations)
+        {
             while (true)
             {
                 // Don't loop if all values have been removed
@@ -279,7 +271,7 @@ namespace EventTriggeredCalc
                     var stdev = Math.Sqrt(meanSqDev);
 
                     // Determine the values outside of the boundaries, and remove them
-                    var cutoff = stdev * numStDevs;
+                    var cutoff = stdev * numberOfStandardDeviations;
                     var startingCount = afvals.Count;
 
                     afvals.RemoveAll(afval => Math.Abs(afval.ValueAsDouble() - mean) > cutoff);
@@ -287,17 +279,14 @@ namespace EventTriggeredCalc
                     // If no items were removed, output the average and break the loop
                     if (afvals.Count == startingCount)
                     {
-                        context.OutputAttribute.Data.UpdateValue(new AFValue(mean, triggerTime), AFUpdateOption.Insert);
-                        break;
+                        return mean;
                     }
                 }
                 else
                 {
-                    // If all of the values have been removed, don't write any output values
-                    Console.WriteLine($"All values were eliminated from the set. No output will be written for {triggerTime}.");
-                    break;
+                    throw new Exception("All values were eliminated. No mean could be calculated");
                 }
-            }            
+            }
         }
     }
 }

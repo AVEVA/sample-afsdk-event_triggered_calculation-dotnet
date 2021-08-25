@@ -125,11 +125,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AFDataPipeEventObserver.cs" />
     <Compile Include="AppSettings.cs" />
-    <Compile Include="ContextDefinition.cs" />
-    <Compile Include="UnresolvedInput.cs" />
-    <Compile Include="Input.cs" />
-    <Compile Include="Context.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
