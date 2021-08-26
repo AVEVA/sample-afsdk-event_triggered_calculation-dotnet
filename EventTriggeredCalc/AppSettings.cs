@@ -10,7 +10,6 @@ namespace EventTriggeredCalc
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2227:Collection properties should be read only", Justification = "Need to read from settings file deserialization")]
         public IList<string> Inputs { get; set; }
 
-
         /// <summary>
         /// The list of input attributes whose updates will trigger a new calculation
         /// </summary>
@@ -21,7 +20,6 @@ namespace EventTriggeredCalc
         /// The number of seconds of time series data to keep in the cache
         /// </summary>
         public int CacheTimeSpanSeconds { get; set; }
-
 
         /// <summary>
         /// The list of elements to run the calculation against
@@ -45,11 +43,5 @@ namespace EventTriggeredCalc
         /// The interval that the timer triggers the checking of snapshot updates, in ms
         /// </summary>
         public int UpdateCheckIntervalMS { get; set; }
-
-        /// <summary>
-        /// The max number of snapshot updates to accept on each check
-        /// This number should be tuned based on the number of tags, update frequency, and check frequency
-        /// </summary>
-        public int MaxEventsPerPeriod { get; set; }
     }
 }

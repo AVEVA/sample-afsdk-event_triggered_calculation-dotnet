@@ -8,7 +8,6 @@ using System.Timers;
 using OSIsoft.AF;
 using OSIsoft.AF.Asset;
 using OSIsoft.AF.Data;
-using OSIsoft.AF.UnitsOfMeasure;
 using Timer = System.Timers.Timer;
 
 namespace EventTriggeredCalc
@@ -20,7 +19,6 @@ namespace EventTriggeredCalc
         private static AFDataPipeEventObserver _observer;
         private static IDisposable _unsubscriber;
         private static IList<string> _triggerAttributeList;
-        private static int _maxEventsPerPeriod;
         private static Exception _toThrow;
         private static Timer _aTimer;
 
@@ -67,7 +65,6 @@ namespace EventTriggeredCalc
                 #region configurationSettings
                 AppSettings settings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(Directory.GetCurrentDirectory() + "/appsettings.json"));
                 _triggerAttributeList = settings.TriggerAttributes;
-                _maxEventsPerPeriod = settings.MaxEventsPerPeriod;
                 #endregion // configurationSettings
 
                 #region step1
@@ -102,7 +99,7 @@ namespace EventTriggeredCalc
                 #endregion // step1
 
                 #region step2
-                Console.WriteLine("Resolving input and output PIPoint objects...");
+                Console.WriteLine("Resolving AFAttributes to add to the Data Cache...");
 
                 var attributeCacheList = new List<AFAttribute>();
 
@@ -142,8 +139,7 @@ namespace EventTriggeredCalc
                 _myAFDataCache.CacheTimeSpan = new TimeSpan(settings.CacheTimeSpanSeconds * TimeSpan.TicksPerSecond);
                 _observer = new AFDataPipeEventObserver();
                 _unsubscriber = _myAFDataCache.Subscribe(_observer);
-                #endregion // step3
-
+                
                 // Create a timer with the specified interval of checking for updates
                 _aTimer = new Timer()
                 {
@@ -156,6 +152,7 @@ namespace EventTriggeredCalc
 
                 // Enable the timer and have it reset on each trigger
                 _aTimer.Enabled = true;
+                #endregion // step3
 
                 #region step4
                 Console.WriteLine("Allowing program to run until canceled...");
@@ -239,10 +236,10 @@ namespace EventTriggeredCalc
             _myAFDataCache.UpdateData();
         }
 
-            /// <summary>
-            /// This function performs the calculation and writes the value to the output tag
-            /// <param name="triggerTime">The timestamp to perform the calculation against</param>
-            /// <param name="context">The context on which to perform this calculation</param>
+        /// <summary>
+        /// This function performs the calculation and writes the value to the output tag
+        /// <param name="triggerTime">The timestamp to perform the calculation against</param>
+        /// <param name="context">The context on which to perform this calculation</param>
         private static void PerformCalculation(DateTime triggerTime, AFElement context)
         {
             // Configuration
@@ -275,7 +272,7 @@ namespace EventTriggeredCalc
             var n = meanPressure * afVolumeVal.ValueAsDouble() / (gasConstant * meanTemp); // PV = nRT; n = PV/(RT)
 
             // write to output attribute.
-            context.Attributes["Result"].Data.UpdateValue(new AFValue(n, triggerTime, context.PISystem.UOMDatabase.UOMs[molUom]), AFUpdateOption.Insert);
+            context.Attributes["Moles"].Data.UpdateValue(new AFValue(n, triggerTime, context.PISystem.UOMDatabase.UOMs[molUom]), AFUpdateOption.Insert);
         }
 
         private static double GetTrimmedMean(AFValues afvals, double numberOfStandardDeviations)
