@@ -248,18 +248,19 @@ namespace EventTriggeredCalc
             // Configuration
             var numValues = 100;  // number of values to find the average of
             var forward = false;
-            UOM tempUom = null;
-            UOM pressUom = null;
-            UOM volUom = null;
+            var tempUom = "K";
+            var pressUom = "torr";
+            var volUom = "L";
+            var molUom = "mol";
             var filterExpression = string.Empty;
             var includeFilteredValues = false;
 
             var numStDevs = 1.75; // number of standard deviations of variance to allow
             
             // Obtain the recent values from the trigger timestamp
-            var afTempVals = context.Attributes["Temperature"].Data.RecordedValuesByCount(triggerTime, numValues, forward, AFBoundaryType.Interpolated, tempUom, filterExpression, includeFilteredValues);
-            var afPressVals = context.Attributes["Pressure"].Data.RecordedValuesByCount(triggerTime, numValues, forward, AFBoundaryType.Interpolated, pressUom, filterExpression, includeFilteredValues);
-            var afVolumeVal = context.Attributes["Volume"].Data.EndOfStream(volUom);
+            var afTempVals = context.Attributes["Temperature"].Data.RecordedValuesByCount(triggerTime, numValues, forward, AFBoundaryType.Interpolated, context.PISystem.UOMDatabase.UOMs[tempUom], filterExpression, includeFilteredValues);
+            var afPressVals = context.Attributes["Pressure"].Data.RecordedValuesByCount(triggerTime, numValues, forward, AFBoundaryType.Interpolated, context.PISystem.UOMDatabase.UOMs[pressUom], filterExpression, includeFilteredValues);
+            var afVolumeVal = context.Attributes["Volume"].Data.EndOfStream(context.PISystem.UOMDatabase.UOMs[volUom]);
 
             // Remove bad values
             afTempVals.RemoveAll(afval => !afval.IsGood);
@@ -270,11 +271,11 @@ namespace EventTriggeredCalc
             var meanPressure = GetTrimmedMean(afPressVals, numStDevs);
 
             // Apply the Ideal Gas Law (PV = nRT) to solve for number of moles
-            var gasConstant = 1.0; // UOMs are important here!
-            var n = meanPressure * afVolumeVal.ValueAsDouble() / (gasConstant * meanTemp);
+            var gasConstant = 62.363598221529; // units of  L * Torr / (K * mol)
+            var n = meanPressure * afVolumeVal.ValueAsDouble() / (gasConstant * meanTemp); // PV = nRT; n = PV/(RT)
 
             // write to output attribute.
-            context.Attributes["Result"].Data.UpdateValue(new AFValue(n, triggerTime), AFUpdateOption.Insert);
+            context.Attributes["Result"].Data.UpdateValue(new AFValue(n, triggerTime, context.PISystem.UOMDatabase.UOMs[molUom]), AFUpdateOption.Insert);
         }
 
         private static double GetTrimmedMean(AFValues afvals, double numberOfStandardDeviations)
