@@ -1,14 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Timers;
 using OSIsoft.AF;
 using OSIsoft.AF.Asset;
 using OSIsoft.AF.Data;
 using OSIsoft.AF.UnitsOfMeasure;
+using Timer = System.Timers.Timer;
 
 namespace EventTriggeredCalc
 {
@@ -21,6 +22,7 @@ namespace EventTriggeredCalc
         private static IList<string> _triggerAttributeList;
         private static int _maxEventsPerPeriod;
         private static Exception _toThrow;
+        private static Timer _aTimer;
 
         /// <summary>
         /// Entry point of the program
@@ -37,7 +39,7 @@ namespace EventTriggeredCalc
             // Pause until the user decides to end the loop
             Console.WriteLine($"Press <ENTER> to end... ");
             Console.ReadLine();
-
+            
             // Cancel the operation and wait until everything is canceled properly
             source.Cancel();
             _ = success.Result; 
@@ -142,6 +144,19 @@ namespace EventTriggeredCalc
                 _unsubscriber = _myAFDataCache.Subscribe(_observer);
                 #endregion // step3
 
+                // Create a timer with the specified interval of checking for updates
+                _aTimer = new Timer()
+                {
+                    Interval = settings.UpdateCheckIntervalMS,
+                    AutoReset = true,
+                };
+
+                // Add the calculation to the timer's elapsed trigger event handler list
+                _aTimer.Elapsed += CheckForUpdates;
+
+                // Enable the timer and have it reset on each trigger
+                _aTimer.Enabled = true;
+
                 #region step4
                 Console.WriteLine("Allowing program to run until canceled...");
 
@@ -162,6 +177,19 @@ namespace EventTriggeredCalc
             }
             finally
             {
+                try
+                {
+                    if (_aTimer != null)
+                    {
+                        Console.WriteLine("Disposing timer object...");
+                        _aTimer.Dispose();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Failed to dispose timer object. Error: {ex.Message}");
+                }
+
                 try
                 {
                     if (_unsubscriber != null)
@@ -206,10 +234,15 @@ namespace EventTriggeredCalc
             }
         }
 
-        /// <summary>
-        /// This function performs the calculation and writes the value to the output tag
-        /// <param name="triggerTime">The timestamp to perform the calculation against</param>
-        /// <param name="context">The context on which to perform this calculation</param>
+        private static void CheckForUpdates(object source, ElapsedEventArgs e)
+        {
+            _myAFDataCache.UpdateData();
+        }
+
+            /// <summary>
+            /// This function performs the calculation and writes the value to the output tag
+            /// <param name="triggerTime">The timestamp to perform the calculation against</param>
+            /// <param name="context">The context on which to perform this calculation</param>
         private static void PerformCalculation(DateTime triggerTime, AFElement context)
         {
             // Configuration
