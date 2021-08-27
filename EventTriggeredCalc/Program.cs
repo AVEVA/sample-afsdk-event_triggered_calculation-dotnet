@@ -255,9 +255,9 @@ namespace EventTriggeredCalc
             var numStDevs = 1.75; // number of standard deviations of variance to allow
             
             // Obtain the recent values from the trigger timestamp
-            var afTempVals = context.Attributes["Temperature"].Data.RecordedValuesByCount(triggerTime, numValues, forward, AFBoundaryType.Interpolated, context.PISystem.UOMDatabase.UOMs[tempUom], filterExpression, includeFilteredValues);
-            var afPressVals = context.Attributes["Pressure"].Data.RecordedValuesByCount(triggerTime, numValues, forward, AFBoundaryType.Interpolated, context.PISystem.UOMDatabase.UOMs[pressUom], filterExpression, includeFilteredValues);
-            var afVolumeVal = context.Attributes["Volume"].Data.EndOfStream(context.PISystem.UOMDatabase.UOMs[volUom]);
+            var afTempVals = GetData(context.Attributes["Temperature"]).RecordedValuesByCount(triggerTime, numValues, forward, AFBoundaryType.Interpolated, context.PISystem.UOMDatabase.UOMs[tempUom], filterExpression, includeFilteredValues);
+            var afPressVals = GetData(context.Attributes["Pressure"]).RecordedValuesByCount(triggerTime, numValues, forward, AFBoundaryType.Interpolated, context.PISystem.UOMDatabase.UOMs[pressUom], filterExpression, includeFilteredValues);
+            var afVolumeVal = GetData(context.Attributes["Volume"]).EndOfStream(context.PISystem.UOMDatabase.UOMs[volUom]);
 
             // Remove bad values
             afTempVals.RemoveAll(afval => !afval.IsGood);
@@ -273,6 +273,14 @@ namespace EventTriggeredCalc
 
             // write to output attribute.
             context.Attributes["Moles"].Data.UpdateValue(new AFValue(n, triggerTime, context.PISystem.UOMDatabase.UOMs[molUom]), AFUpdateOption.Insert);
+        }
+
+        private static AFData GetData(AFAttribute attribute)
+        {
+            if (_myAFDataCache.TryGetItem(attribute, out var data))
+                return data;
+            else
+                return attribute.Data;
         }
 
         private static double GetTrimmedMean(AFValues afvals, double numberOfStandardDeviations)
