@@ -243,7 +243,7 @@ namespace EventTriggeredCalc
         private static void PerformCalculation(DateTime triggerTime, AFElement context)
         {
             // Configuration
-            var numValues = 100;  // number of values to find the average of
+            var numValues = 100;  // number of values to find the trimmed average of
             var forward = false;
             var tempUom = "K";
             var pressUom = "torr";

@@ -17,10 +17,9 @@ namespace EventTriggeredCalcTests
         [Fact]
         public void EventTriggeredCalcTest()
         {
-            var testNonce = new Random().Next(int.MaxValue);
-            double valToWrite = 0.0;
-            int numValsToWritePerTrigerr = 3;
-            int totalExpectedValsWritten = 3 * 2;
+            var testNonce = new Random().Next(int.MaxValue); // A unique integer to append to the elements to make them unique across test runs
+            var numValsToWritePerTrigerr = 3;
+            var totalExpectedValsWritten = numValsToWritePerTrigerr * 2;
             var timesWrittenTo = new List<DateTime>(); // When a trigger tag was written to
             var errorThreshold = new TimeSpan(0, 0, 0, 0, 1); // 1 ms time max error is acceptable due to floating point error
             var tempValToWrite = 273.0;
@@ -168,7 +167,7 @@ namespace EventTriggeredCalcTests
                 // Write to the non-triggering input tag. This way if it triggers the calculation, the timestamps will be off by one, failing the test later.
                 foreach (var context in contextElementList)
                 {
-                    context.Attributes["Volume"].Data.UpdateValue(new AFValue(valToWrite, DateTime.Now), AFUpdateOption.Replace);
+                    context.Attributes["Volume"].Data.UpdateValue(new AFValue(volValue, DateTime.Now), AFUpdateOption.Replace);
                 }
 
                 // Pause to give the calculations enough time to complete
@@ -239,6 +238,9 @@ namespace EventTriggeredCalcTests
 
                 // Delete element template
                 myAFDB.ElementTemplates.Remove(eventTrigerredTemplate);
+
+                // Check in the changes
+                myAFDB.CheckIn(AFCheckedOutMode.ObjectsCheckedOutThisSession);
                 #endregion // step6
             }
             catch (Exception ex)
