@@ -16,7 +16,6 @@ namespace EventTriggeredCalcTests
         [Fact]
         public void EventTriggeredCalcTest()
         {
-            var testNonce = new Random().Next(int.MaxValue); // A unique integer to append to the elements to make them unique across test runs
             var numValsToWritePerTrigerr = 3;
             var totalExpectedValsWritten = numValsToWritePerTrigerr * 2;
             var timesWrittenTo = new List<DateTime>(); // When a trigger tag was written to
@@ -27,9 +26,9 @@ namespace EventTriggeredCalcTests
             var gasConstant = 62.363598221529; // units of  L * Torr / (K * mol)
             var expectedMolesOutput = pressValToWrite * volValue / (gasConstant * tempValToWrite);
             var contextElementList = new List<AFElement>();
+            var templateName = "EventTriggeredSampleTemplate";
 
             AFDatabase myAFDB = null;
-            string templateName = "";
             
             try
             {
@@ -70,18 +69,17 @@ namespace EventTriggeredCalcTests
                 #region step2
                 Console.WriteLine("TEST: Creating element template to test against...");
 
-                templateName = $"EventTriggeredSampleTemplate_{testNonce}";
                 var eventTrigerredTemplate = myAFDB.ElementTemplates.Add(templateName);
                 
                 var tempInputTemplate = eventTrigerredTemplate.AttributeTemplates.Add("Temperature");
                 tempInputTemplate.DefaultUOM = myPISystem.UOMDatabase.UOMs["K"];
                 tempInputTemplate.DataReferencePlugIn = AFDataReference.GetPIPointDataReference(myPISystem);
-                tempInputTemplate.ConfigString = @"\\%Server%\%Element%.%Attribute%;pointtype=Float64";
+                tempInputTemplate.ConfigString = @"\\%Server%\%Element%.%Attribute%;pointtype=Float64;compressing=0";
 
                 var pressInputTemplate = eventTrigerredTemplate.AttributeTemplates.Add("Pressure");
                 pressInputTemplate.DefaultUOM = myPISystem.UOMDatabase.UOMs["torr"];
                 pressInputTemplate.DataReferencePlugIn = AFDataReference.GetPIPointDataReference(myPISystem);
-                pressInputTemplate.ConfigString = @"\\%Server%\%Element%.%Attribute%;pointtype=Float64";
+                pressInputTemplate.ConfigString = @"\\%Server%\%Element%.%Attribute%;pointtype=Float64;compressing=0";
 
                 var volInputTemplate = eventTrigerredTemplate.AttributeTemplates.Add("Volume");
                 volInputTemplate.DefaultUOM = myPISystem.UOMDatabase.UOMs["L"];
@@ -90,19 +88,19 @@ namespace EventTriggeredCalcTests
                 var molOutputTemplate = eventTrigerredTemplate.AttributeTemplates.Add("Moles");
                 molOutputTemplate.DefaultUOM = myPISystem.UOMDatabase.UOMs["mol"];
                 molOutputTemplate.DataReferencePlugIn = AFDataReference.GetPIPointDataReference(myPISystem);
-                molOutputTemplate.ConfigString = @"\\%Server%\%Element%.%Attribute%;pointtype=Float64";
+                molOutputTemplate.ConfigString = @"\\%Server%\%Element%.%Attribute%;pointtype=Float64;compressing=0";
 
                 var molRateOutputTemplate = eventTrigerredTemplate.AttributeTemplates.Add("MolarFlowRate");
                 molRateOutputTemplate.DefaultUOM = myPISystem.UOMDatabase.UOMs["mol/s"];
                 molRateOutputTemplate.DataReferencePlugIn = AFDataReference.GetPIPointDataReference(myPISystem);
-                molRateOutputTemplate.ConfigString = @"\\%Server%\%Element%.%Attribute%;pointtype=Float64";
+                molRateOutputTemplate.ConfigString = @"\\%Server%\%Element%.%Attribute%;pointtype=Float64;compressing=0";
 
                 Console.WriteLine("TEST: Creating elements to test against...");
 
                 // create elements from context list
                 foreach (var context in settings.Contexts)
                 {
-                    var thisElement = new AFElement($"{context}_{testNonce}", eventTrigerredTemplate);
+                    var thisElement = new AFElement(context, eventTrigerredTemplate);
                     myAFDB.Elements.Add(thisElement);
                     contextElementList.Add(thisElement);
                 }
