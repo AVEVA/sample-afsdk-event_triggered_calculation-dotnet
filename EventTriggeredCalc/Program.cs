@@ -8,6 +8,7 @@ using System.Timers;
 using OSIsoft.AF;
 using OSIsoft.AF.Asset;
 using OSIsoft.AF.Data;
+using OSIsoft.AF.Time;
 using Timer = System.Timers.Timer;
 
 namespace EventTriggeredCalc
@@ -18,7 +19,6 @@ namespace EventTriggeredCalc
         private static AFKeyedResults<AFAttribute, AFData> _dataCaches;
         private static AFDataPipeEventObserver _observer;
         private static IDisposable _unsubscriber;
-        private static IList<string> _triggerAttributeList;
         private static Exception _toThrow;
         private static Timer _aTimer;
 
@@ -64,7 +64,6 @@ namespace EventTriggeredCalc
             {
                 #region configurationSettings
                 AppSettings settings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(Directory.GetCurrentDirectory() + "/appsettings.json"));
-                _triggerAttributeList = settings.TriggerAttributes;
                 #endregion // configurationSettings
 
                 #region step1
@@ -115,10 +114,10 @@ namespace EventTriggeredCalc
                         var thisattributeCacheList = new List<AFAttribute>();
 
                         // Resolve each input attribute
-                        foreach (var input in settings.Inputs)
-                        {
-                            thisattributeCacheList.Add(thisElement.Attributes[input]);
-                        }
+                        thisattributeCacheList.Add(thisElement.Attributes["Temperature"]);
+                        thisattributeCacheList.Add(thisElement.Attributes["Pressure"]);
+                        thisattributeCacheList.Add(thisElement.Attributes["Volume"]);
+                        thisattributeCacheList.Add(thisElement.Attributes["Moles"]);
 
                         // If successful, add to the list of resolved attributes to the data cache list
                         attributeCacheList.AddRange(thisattributeCacheList);
@@ -225,7 +224,13 @@ namespace EventTriggeredCalc
                 throw new ArgumentNullException(nameof(thisEvent));
             }
 
-            if (_triggerAttributeList.Contains(thisEvent.Value.Attribute.Name))
+            var triggerList = new List<string>
+            {
+                "Temperature",
+                "Pressure",
+            };
+
+            if (triggerList.Contains(thisEvent.Value.Attribute.Name))
             {
                 PerformCalculation(thisEvent.Value.Timestamp, (AFElement)thisEvent.Value.Attribute.Element);
             }
@@ -244,19 +249,20 @@ namespace EventTriggeredCalc
         {
             // Configuration
             var numValues = 100;  // number of values to find the trimmed average of
-            var forward = false;
+            var isForward = false;
             var tempUom = "K";
             var pressUom = "torr";
             var volUom = "L";
             var molUom = "mol";
+            var molRateUom = "mol/s";
             var filterExpression = string.Empty;
             var includeFilteredValues = false;
 
             var numStDevs = 1.75; // number of standard deviations of variance to allow
             
             // Obtain the recent values from the trigger timestamp
-            var afTempVals = GetData(context.Attributes["Temperature"]).RecordedValuesByCount(triggerTime, numValues, forward, AFBoundaryType.Interpolated, context.PISystem.UOMDatabase.UOMs[tempUom], filterExpression, includeFilteredValues);
-            var afPressVals = GetData(context.Attributes["Pressure"]).RecordedValuesByCount(triggerTime, numValues, forward, AFBoundaryType.Interpolated, context.PISystem.UOMDatabase.UOMs[pressUom], filterExpression, includeFilteredValues);
+            var afTempVals = GetData(context.Attributes["Temperature"]).RecordedValuesByCount(triggerTime, numValues, isForward, AFBoundaryType.Interpolated, context.PISystem.UOMDatabase.UOMs[tempUom], filterExpression, includeFilteredValues);
+            var afPressVals = GetData(context.Attributes["Pressure"]).RecordedValuesByCount(triggerTime, numValues, isForward, AFBoundaryType.Interpolated, context.PISystem.UOMDatabase.UOMs[pressUom], filterExpression, includeFilteredValues);
             var afVolumeVal = GetData(context.Attributes["Volume"]).EndOfStream(context.PISystem.UOMDatabase.UOMs[volUom]);
 
             // Remove bad values
@@ -269,10 +275,34 @@ namespace EventTriggeredCalc
 
             // Apply the Ideal Gas Law (PV = nRT) to solve for number of moles
             var gasConstant = 62.363598221529; // units of  L * Torr / (K * mol)
-            var n = meanPressure * afVolumeVal.ValueAsDouble() / (gasConstant * meanTemp); // PV = nRT; n = PV/(RT)
+            var currentMolarValue = meanPressure * afVolumeVal.ValueAsDouble() / (gasConstant * meanTemp); // PV = nRT; n = PV/(RT)
 
-            // write to output attribute.
-            context.Attributes["Moles"].Data.UpdateValue(new AFValue(n, triggerTime, context.PISystem.UOMDatabase.UOMs[molUom]), AFUpdateOption.Insert);
+            // Before writing to the output attribute, find the previous value to determine rate of change
+            AFValue previousMolarValue = null;
+            try
+            {
+                previousMolarValue = GetData(context.Attributes["Moles"]).RecordedValuesByCount(triggerTime, 1, isForward, AFBoundaryType.Inside, context.PISystem.UOMDatabase.UOMs[molUom], filterExpression, includeFilteredValues)[0];
+            }
+            catch
+            {
+                Console.WriteLine($"Previous value not found for {triggerTime}");
+            }
+
+            // Write to output attribute's data cache since we want to use this value in the next section
+            // Using the cache ensures the value is robustly read back and does not have to travel through the Data Archive and back
+            GetData(context.Attributes["Moles"]).UpdateValue(new AFValue(currentMolarValue, triggerTime, context.PISystem.UOMDatabase.UOMs[molUom]), AFUpdateOption.Insert);
+
+            // If there are not yet two values, or one of them was bad, do not calculate the rate
+            if (previousMolarValue == null || !previousMolarValue.IsGood)
+            {
+                Console.WriteLine($"Insufficient value count to determine molar rate of change at {triggerTime}. Skipping this calculation...");
+                return;
+            }
+
+            // Find the rate and write it to the attribute
+            // This attribute is not read by this calculation, so writing to the cache is not necessary
+            var molarRateOfChange = (currentMolarValue - previousMolarValue.ValueAsDouble()) / (new AFTimeSpan(new AFTime(triggerTime) - previousMolarValue.Timestamp).Ticks / TimeSpan.TicksPerSecond);
+            context.Attributes["MolarFlowRate"].Data.UpdateValue(new AFValue(molarRateOfChange, triggerTime, context.PISystem.UOMDatabase.UOMs[molRateUom]), AFUpdateOption.Insert);
         }
 
         private static AFData GetData(AFAttribute attribute)

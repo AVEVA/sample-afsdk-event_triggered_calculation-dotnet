@@ -5,18 +5,6 @@ namespace EventTriggeredCalc
     public class AppSettings
     {
         /// <summary>
-        /// The list of input attributes whose updates will trigger a new calculation
-        /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2227:Collection properties should be read only", Justification = "Need to read from settings file deserialization")]
-        public IList<string> Inputs { get; set; }
-
-        /// <summary>
-        /// The list of input attributes whose updates will trigger a new calculation
-        /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Usage", "CA2227:Collection properties should be read only", Justification = "Need to read from settings file deserialization")]
-        public IList<string> TriggerAttributes { get; set; }
-
-        /// <summary>
         /// The number of seconds of time series data to keep in the cache
         /// </summary>
         public int CacheTimeSpanSeconds { get; set; }

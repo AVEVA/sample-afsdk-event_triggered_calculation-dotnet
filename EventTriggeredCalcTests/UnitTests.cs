@@ -7,7 +7,6 @@ using EventTriggeredCalc;
 using OSIsoft.AF;
 using OSIsoft.AF.Asset;
 using OSIsoft.AF.Data;
-using OSIsoft.AF.PI;
 using Xunit;
 
 namespace EventTriggeredCalcTests
@@ -28,6 +27,9 @@ namespace EventTriggeredCalcTests
             var gasConstant = 62.363598221529; // units of  L * Torr / (K * mol)
             var expectedMolesOutput = pressValToWrite * volValue / (gasConstant * tempValToWrite);
             var contextElementList = new List<AFElement>();
+
+            AFDatabase myAFDB = null;
+            string templateName = "";
             
             try
             {
@@ -54,8 +56,6 @@ namespace EventTriggeredCalcTests
 
                 Console.WriteLine("Resolving AF Database object...");
 
-                AFDatabase myAFDB;
-
                 if (string.IsNullOrWhiteSpace(settings.AFDatabaseName))
                 {
                     // Use the default PI Data Archive
@@ -70,7 +70,8 @@ namespace EventTriggeredCalcTests
                 #region step2
                 Console.WriteLine("TEST: Creating element template to test against...");
 
-                var eventTrigerredTemplate = myAFDB.ElementTemplates.Add($"EventTriggeredSampleTemplate_{testNonce}");
+                templateName = $"EventTriggeredSampleTemplate_{testNonce}";
+                var eventTrigerredTemplate = myAFDB.ElementTemplates.Add(templateName);
                 
                 var tempInputTemplate = eventTrigerredTemplate.AttributeTemplates.Add("Temperature");
                 tempInputTemplate.DefaultUOM = myPISystem.UOMDatabase.UOMs["K"];
@@ -83,13 +84,18 @@ namespace EventTriggeredCalcTests
                 pressInputTemplate.ConfigString = @"\\%Server%\%Element%.%Attribute%;pointtype=Float64";
 
                 var volInputTemplate = eventTrigerredTemplate.AttributeTemplates.Add("Volume");
-                volInputTemplate.DefaultUOM = myPISystem.UOMDatabase.UOMs["atm"];
+                volInputTemplate.DefaultUOM = myPISystem.UOMDatabase.UOMs["L"];
                 volInputTemplate.SetValue(volValue, myPISystem.UOMDatabase.UOMs["L"]);
 
                 var molOutputTemplate = eventTrigerredTemplate.AttributeTemplates.Add("Moles");
                 molOutputTemplate.DefaultUOM = myPISystem.UOMDatabase.UOMs["mol"];
                 molOutputTemplate.DataReferencePlugIn = AFDataReference.GetPIPointDataReference(myPISystem);
                 molOutputTemplate.ConfigString = @"\\%Server%\%Element%.%Attribute%;pointtype=Float64";
+
+                var molRateOutputTemplate = eventTrigerredTemplate.AttributeTemplates.Add("MolarFlowRate");
+                molRateOutputTemplate.DefaultUOM = myPISystem.UOMDatabase.UOMs["mol/s"];
+                molRateOutputTemplate.DataReferencePlugIn = AFDataReference.GetPIPointDataReference(myPISystem);
+                molRateOutputTemplate.ConfigString = @"\\%Server%\%Element%.%Attribute%;pointtype=Float64";
 
                 Console.WriteLine("TEST: Creating elements to test against...");
 
@@ -101,11 +107,11 @@ namespace EventTriggeredCalcTests
                     contextElementList.Add(thisElement);
                 }
 
-                // create or update reference
-                AFDataReference.CreateConfig(myAFDB, null);
-
                 // check in
                 myAFDB.CheckIn(AFCheckedOutMode.ObjectsCheckedOutThisSession);
+
+                // create or update reference
+                AFDataReference.CreateConfig(myAFDB, null);
 
                 Console.WriteLine("TEST: Writing values to input tags...");
                 foreach (var context in contextElementList)
@@ -220,7 +226,14 @@ namespace EventTriggeredCalcTests
                     }
                 }
                 #endregion // step5
-
+            }
+            catch (Exception ex)
+            {
+                // If there was an exception along the way, fail the test
+                Assert.True(false, ex.Message);
+            }
+            finally
+            {
                 #region step6
                 Console.WriteLine("TEST: Deleting elements and element templates...");
                 Console.WriteLine("TEST: Cleaning up...");
@@ -228,25 +241,66 @@ namespace EventTriggeredCalcTests
                 foreach (var context in contextElementList)
                 {
                     // Delete underlying tags
-                    context.Attributes["Temperature"].PIPoint.Server.DeletePIPoint(context.Attributes["Temperature"].PIPoint.Name);
-                    context.Attributes["Pressure"].PIPoint.Server.DeletePIPoint(context.Attributes["Pressure"].PIPoint.Name);
-                    context.Attributes["Moles"].PIPoint.Server.DeletePIPoint(context.Attributes["Moles"].PIPoint.Name);
+                    try
+                    {
+                        context.Attributes["Temperature"].PIPoint.Server.DeletePIPoint(context.Attributes["Temperature"].PIPoint.Name);
+                    }
+                    catch
+                    {
+                        Console.WriteLine($"Temperature PI Point not deleted for {context.Name}");
+                    }
 
-                    // Delete elements
-                    myAFDB.Elements.Remove(context);
+                    try
+                    {
+                        context.Attributes["Pressure"].PIPoint.Server.DeletePIPoint(context.Attributes["Pressure"].PIPoint.Name);
+                    }
+                    catch
+                    {
+                        Console.WriteLine($"Pressure PI Point not deleted for {context.Name}");
+                    }
+
+                    try
+                    {
+                        context.Attributes["Moles"].PIPoint.Server.DeletePIPoint(context.Attributes["Moles"].PIPoint.Name);
+                    }
+                    catch
+                    {
+                        Console.WriteLine($"Moles PI Point not deleted for {context.Name}");
+                    }
+
+                    try
+                    {
+                        context.Attributes["MolarFlowRate"].PIPoint.Server.DeletePIPoint(context.Attributes["MolarFlowRate"].PIPoint.Name);
+                    }
+                    catch
+                    {
+                        Console.WriteLine($"MolarFlowRate PI Point not deleted for {context.Name}");
+                    }
+
+                    // Delete element
+                    try
+                    {
+                        myAFDB.Elements.Remove(context);
+                    }
+                    catch
+                    {
+                        Console.WriteLine($"{context.Name} element not deleted.");
+                    }
                 }
 
                 // Delete element template
-                myAFDB.ElementTemplates.Remove(eventTrigerredTemplate);
-
+                try
+                {
+                    myAFDB.ElementTemplates.Remove(templateName);
+                }
+                catch
+                {
+                    Console.WriteLine($"Element template {templateName} not deleted");
+                }
+                
                 // Check in the changes
                 myAFDB.CheckIn(AFCheckedOutMode.ObjectsCheckedOutThisSession);
                 #endregion // step6
-            }
-            catch (Exception ex)
-            {
-                // If there was an exception along the way, fail the test
-                Assert.True(false, ex.Message);
             }
         }
     }
