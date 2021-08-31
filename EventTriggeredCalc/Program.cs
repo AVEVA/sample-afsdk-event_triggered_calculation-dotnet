@@ -108,7 +108,6 @@ namespace EventTriggeredCalc
                 #region step3
                 Console.WriteLine("Creating a data cache for snapshot event updates...");
 
-
                 // Create the data cache for the input attributes and set the time span for which to retain data
                 _myAFDataCache = new AFDataCache();
                 _dataCaches = _myAFDataCache.Add(attributeCacheList);
