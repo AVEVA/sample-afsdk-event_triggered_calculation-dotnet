@@ -38,7 +38,7 @@ namespace EventTriggeredCalcTests
                 #endregion // configurationSettings
 
                 #region step1
-                Console.WriteLine("TEST: Resolving PI Data Archive object...");
+                Console.WriteLine("TEST: Resolving AF Server object...");
 
                 var myPISystems = new PISystems();
                 PISystem myPISystem;

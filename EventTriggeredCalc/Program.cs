@@ -100,34 +100,7 @@ namespace EventTriggeredCalc
                 #region step2
                 Console.WriteLine("Resolving AFAttributes to add to the Data Cache...");
 
-                var attributeCacheList = new List<AFAttribute>();
-
-                // Resolve the input and output tag names to PIPoint objects
-                foreach (var context in settings.Contexts)
-                {
-                    try
-                    {
-                        // Resolve the element from its name
-                        var thisElement = myAFDB.Elements[context];
-
-                        // Make a list of inputs to ensure a partially failed context resolution doesn't add to the data cache
-                        var thisattributeCacheList = new List<AFAttribute>();
-
-                        // Resolve each input attribute
-                        thisattributeCacheList.Add(thisElement.Attributes["Temperature"]);
-                        thisattributeCacheList.Add(thisElement.Attributes["Pressure"]);
-                        thisattributeCacheList.Add(thisElement.Attributes["Volume"]);
-                        thisattributeCacheList.Add(thisElement.Attributes["Moles"]);
-
-                        // If successful, add to the list of resolved attributes to the data cache list
-                        attributeCacheList.AddRange(thisattributeCacheList);
-                    }
-                    catch (Exception ex)
-                    {
-                        // If not successful, inform the user and move on to the next pair
-                        Console.WriteLine($"Context {context} will be skipped due to error: {ex.Message}");
-                    }
-                }
+                var attributeCacheList = DetermineListOfIdealGasLawCalculationAttributes(myAFDB, settings.Contexts);
                 #endregion // step2
 
                 #region step3
@@ -217,6 +190,10 @@ namespace EventTriggeredCalc
             return _toThrow == null;
         }
 
+        /// <summary>
+        /// This method receives the AFDataPipeEvent and determines whether to trigger a new calculation on this event
+        /// </summary>
+        /// <param name="thisEvent">The update event received from the AF Server</param>
         public static void ProcessUpdate(AFDataPipeEvent thisEvent)
         {
             if (thisEvent == null)
@@ -236,13 +213,60 @@ namespace EventTriggeredCalc
             }
         }
 
+        /// <summary>
+        /// This method determines the AFAttribute objects to add to the data cache. 
+        /// The attributes are hard coded for this calculation, so the logic is abstracted out of the main method
+        /// </summary>
+        /// <param name="myAFDB">The AF Database the calculation is running against</param>
+        /// <param name="elementContexts">The list of element names from the appsettings /param>
+        /// <returns>A list of AFAttribute objects to be added to the data cache</returns>
+        private static List<AFAttribute> DetermineListOfIdealGasLawCalculationAttributes(AFDatabase myAFDB, IList<string> elementContexts)
+        {
+            var attributeCacheList = new List<AFAttribute>();
+
+            // Resolve the input and output tag names to PIPoint objects
+            foreach (var context in elementContexts)
+            {
+                try
+                {
+                    // Resolve the element from its name
+                    var thisElement = myAFDB.Elements[context];
+
+                    // Make a list of inputs to ensure a partially failed context resolution doesn't add to the data cache
+                    var thisattributeCacheList = new List<AFAttribute>
+                    {
+                        // Resolve each input attribute
+                        thisElement.Attributes["Temperature"],
+                        thisElement.Attributes["Pressure"],
+                        thisElement.Attributes["Volume"],
+                        thisElement.Attributes["Moles"],
+                    };
+
+                    // If successful, add to the list of resolved attributes to the data cache list
+                    attributeCacheList.AddRange(thisattributeCacheList);
+                }
+                catch (Exception ex)
+                {
+                    // If not successful, inform the user and move on to the next pair
+                    Console.WriteLine($"Context {context} will be skipped due to error: {ex.Message}");
+                }
+            }
+
+            return attributeCacheList;
+        }
+
+        /// <summary>
+        /// This method updates the AFDataCache on every timer interval
+        /// </summary>
+        /// <param name="source">The timer source</param>
+        /// <param name="e">The passed argument from the timer</param>
         private static void CheckForUpdates(object source, ElapsedEventArgs e)
         {
             _myAFDataCache.UpdateData();
         }
 
         /// <summary>
-        /// This function performs the calculation and writes the value to the output tag
+        /// This method performs the calculation and writes the value to the output tag
         /// <param name="triggerTime">The timestamp to perform the calculation against</param>
         /// <param name="context">The context on which to perform this calculation</param>
         private static void PerformCalculation(DateTime triggerTime, AFElement context)
@@ -305,6 +329,11 @@ namespace EventTriggeredCalc
             context.Attributes["MolarFlowRate"].Data.UpdateValue(new AFValue(molarRateOfChange, triggerTime, context.PISystem.UOMDatabase.UOMs[molRateUom]), AFUpdateOption.Insert);
         }
 
+        /// <summary>
+        /// This method returns the AFData object from the cache if it exists, otherwise returns the attribute's non-cached AFData object
+        /// </summary>
+        /// <param name="attribute">The AFAttribute whose AFData object is being requested</param>
+        /// <returns>The cached, if possible, otherwise non-cached AFData object for the requested attribute</returns>
         private static AFData GetData(AFAttribute attribute)
         {
             if (_myAFDataCache.TryGetItem(attribute, out var data))
@@ -313,6 +342,12 @@ namespace EventTriggeredCalc
                 return attribute.Data;
         }
 
+        /// <summary>
+        /// This method finds the mean of a set of AFValues after removing the outliers in an iterative fashion
+        /// </summary>
+        /// <param name="afvals">List of values to be summarized</param>
+        /// <param name="numberOfStandardDeviations">The cutoff for outliers</param>
+        /// <returns>The mean of the non-outlier values</returns>
         private static double GetTrimmedMean(AFValues afvals, double numberOfStandardDeviations)
         {
             while (true)
