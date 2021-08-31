@@ -100,15 +100,21 @@ namespace EventTriggeredCalc
                 #region step2
                 Console.WriteLine("Resolving AFAttributes to add to the Data Cache...");
 
+                // Determine the list of attributes to add to the data cache. 
+                // This is extracted into a separate function as its calculation specific.
                 var attributeCacheList = DetermineListOfIdealGasLawCalculationAttributes(myAFDB, settings.Contexts);
                 #endregion // step2
 
                 #region step3
                 Console.WriteLine("Creating a data cache for snapshot event updates...");
 
+
+                // Create the data cache for the input attributes and set the time span for which to retain data
                 _myAFDataCache = new AFDataCache();
                 _dataCaches = _myAFDataCache.Add(attributeCacheList);
                 _myAFDataCache.CacheTimeSpan = new TimeSpan(settings.CacheTimeSpanSeconds * TimeSpan.TicksPerSecond);
+
+                // Configure the observer object to listen for updates
                 _observer = new AFDataPipeEventObserver();
                 _unsubscriber = _myAFDataCache.Subscribe(_observer);
                 
@@ -146,6 +152,7 @@ namespace EventTriggeredCalc
             }
             finally
             {
+                // Manually dispose the necessary object since a 'using' statement is not being used
                 try
                 {
                     if (_aTimer != null)
@@ -196,17 +203,20 @@ namespace EventTriggeredCalc
         /// <param name="thisEvent">The update event received from the AF Server</param>
         public static void ProcessUpdate(AFDataPipeEvent thisEvent)
         {
+            // Confirm the event passed is not null
             if (thisEvent == null)
             {
                 throw new ArgumentNullException(nameof(thisEvent));
             }
 
+            // List of attribute names on which to trigger updates
             var triggerList = new List<string>
             {
                 "Temperature",
                 "Pressure",
             };
 
+            // If the attribute is a trigger, perform a new calculation
             if (triggerList.Contains(thisEvent.Value.Attribute.Name))
             {
                 PerformCalculation(thisEvent.Value.Timestamp, (AFElement)thisEvent.Value.Attribute.Element);
@@ -224,7 +234,6 @@ namespace EventTriggeredCalc
         {
             var attributeCacheList = new List<AFAttribute>();
 
-            // Resolve the input and output tag names to PIPoint objects
             foreach (var context in elementContexts)
             {
                 try
@@ -262,6 +271,7 @@ namespace EventTriggeredCalc
         /// <param name="e">The passed argument from the timer</param>
         private static void CheckForUpdates(object source, ElapsedEventArgs e)
         {
+            // UpdateData fetches updates from the AF Server to update the client-side cache
             _myAFDataCache.UpdateData();
         }
 
@@ -336,8 +346,11 @@ namespace EventTriggeredCalc
         /// <returns>The cached, if possible, otherwise non-cached AFData object for the requested attribute</returns>
         private static AFData GetData(AFAttribute attribute)
         {
+            // If the attribute is in the cache, return the local cache instance's AFData object
             if (_myAFDataCache.TryGetItem(attribute, out var data))
                 return data;
+
+            // Otherwise, return the attribute's underlying, non-cached AFData object
             else
                 return attribute.Data;
         }
