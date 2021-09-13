@@ -16,7 +16,6 @@ namespace EventTriggeredCalc
     public static class Program
     {
         private static AFDataCache _myAFDataCache;
-        private static AFKeyedResults<AFAttribute, AFData> _dataCaches;
         private static AFDataPipeEventObserver _observer;
         private static IDisposable _unsubscriber;
         private static Exception _toThrow;
@@ -110,7 +109,7 @@ namespace EventTriggeredCalc
 
                 // Create the data cache for the input attributes and set the time span for which to retain data
                 _myAFDataCache = new AFDataCache();
-                _dataCaches = _myAFDataCache.Add(attributeCacheList);
+                _myAFDataCache.Add(attributeCacheList);
                 _myAFDataCache.CacheTimeSpan = new TimeSpan(settings.CacheTimeSpanSeconds * TimeSpan.TicksPerSecond);
 
                 // Configure the observer object to listen for updates
@@ -200,7 +199,7 @@ namespace EventTriggeredCalc
         /// This method receives the AFDataPipeEvent and determines whether to trigger a new calculation on this event
         /// </summary>
         /// <param name="thisEvent">The update event received from the AF Server</param>
-        public static void ProcessUpdate(AFDataPipeEvent thisEvent)
+        internal static void ProcessUpdate(AFDataPipeEvent thisEvent)
         {
             // Confirm the event passed is not null
             if (thisEvent == null)
@@ -223,47 +222,6 @@ namespace EventTriggeredCalc
         }
 
         /// <summary>
-        /// This method determines the AFAttribute objects to add to the data cache. 
-        /// The attributes are hard coded for this calculation, so the logic is abstracted out of the main method
-        /// </summary>
-        /// <param name="myAFDB">The AF Database the calculation is running against</param>
-        /// <param name="elementContexts">The list of element names from the appsettings /param>
-        /// <returns>A list of AFAttribute objects to be added to the data cache</returns>
-        private static List<AFAttribute> DetermineListOfIdealGasLawCalculationAttributes(AFDatabase myAFDB, IList<string> elementContexts)
-        {
-            var attributeCacheList = new List<AFAttribute>();
-
-            foreach (var context in elementContexts)
-            {
-                try
-                {
-                    // Resolve the element from its name
-                    var thisElement = myAFDB.Elements[context];
-
-                    // Make a list of inputs to ensure a partially failed context resolution doesn't add to the data cache
-                    var thisattributeCacheList = new List<AFAttribute>
-                    {
-                        // Resolve each input attribute
-                        thisElement.Attributes["Temperature"],
-                        thisElement.Attributes["Pressure"],
-                        thisElement.Attributes["Volume"],
-                        thisElement.Attributes["Moles"],
-                    };
-
-                    // If successful, add to the list of resolved attributes to the data cache list
-                    attributeCacheList.AddRange(thisattributeCacheList);
-                }
-                catch (Exception ex)
-                {
-                    // If not successful, inform the user and move on to the next pair
-                    Console.WriteLine($"Context {context} will be skipped due to error: {ex.Message}");
-                }
-            }
-
-            return attributeCacheList;
-        }
-
-        /// <summary>
         /// This method updates the AFDataCache on every timer interval
         /// </summary>
         /// <param name="source">The timer source</param>
@@ -272,6 +230,22 @@ namespace EventTriggeredCalc
         {
             // UpdateData fetches updates from the AF Server to update the client-side cache
             _myAFDataCache.UpdateData();
+        }
+
+        /// <summary>
+        /// This method returns the AFData object from the cache if it exists, otherwise returns the attribute's non-cached AFData object
+        /// </summary>
+        /// <param name="attribute">The AFAttribute whose AFData object is being requested</param>
+        /// <returns>The cached, if possible, otherwise non-cached AFData object for the requested attribute</returns>
+        private static AFData GetData(AFAttribute attribute)
+        {
+            // If the attribute is in the cache, return the local cache instance's AFData object
+            if (_myAFDataCache.TryGetItem(attribute, out var data))
+                return data;
+
+            // Otherwise, return the attribute's underlying, non-cached AFData object
+            else
+                return attribute.Data;
         }
 
         /// <summary>
@@ -339,23 +313,48 @@ namespace EventTriggeredCalc
         }
 
         /// <summary>
-        /// This method returns the AFData object from the cache if it exists, otherwise returns the attribute's non-cached AFData object
+        /// This method determines the AFAttribute objects to add to the data cache. 
+        /// The attributes are hard coded for this calculation, so the logic is abstracted out of the main method. This needs updating for each new calculation.
         /// </summary>
-        /// <param name="attribute">The AFAttribute whose AFData object is being requested</param>
-        /// <returns>The cached, if possible, otherwise non-cached AFData object for the requested attribute</returns>
-        private static AFData GetData(AFAttribute attribute)
+        /// <param name="myAFDB">The AF Database the calculation is running against</param>
+        /// <param name="elementContexts">The list of element names from the appsettings /param>
+        /// <returns>A list of AFAttribute objects to be added to the data cache</returns>
+        private static List<AFAttribute> DetermineListOfIdealGasLawCalculationAttributes(AFDatabase myAFDB, IList<string> elementContexts)
         {
-            // If the attribute is in the cache, return the local cache instance's AFData object
-            if (_myAFDataCache.TryGetItem(attribute, out var data))
-                return data;
+            var attributeCacheList = new List<AFAttribute>();
 
-            // Otherwise, return the attribute's underlying, non-cached AFData object
-            else
-                return attribute.Data;
+            foreach (var context in elementContexts)
+            {
+                try
+                {
+                    // Resolve the element from its name
+                    var thisElement = myAFDB.Elements[context];
+
+                    // Make a list of inputs to ensure a partially failed context resolution doesn't add to the data cache
+                    var thisattributeCacheList = new List<AFAttribute>
+                    {
+                        // Resolve each input attribute
+                        thisElement.Attributes["Temperature"],
+                        thisElement.Attributes["Pressure"],
+                        thisElement.Attributes["Volume"],
+                        thisElement.Attributes["Moles"],
+                    };
+
+                    // If successful, add to the list of resolved attributes to the data cache list
+                    attributeCacheList.AddRange(thisattributeCacheList);
+                }
+                catch (Exception ex)
+                {
+                    // If not successful, inform the user and move on to the next pair
+                    Console.WriteLine($"Context {context} will be skipped due to error: {ex.Message}");
+                }
+            }
+
+            return attributeCacheList;
         }
 
         /// <summary>
-        /// This method finds the mean of a set of AFValues after removing the outliers in an iterative fashion
+        /// This method finds the mean of a set of AFValues after removing the outliers in an iterative fashion. This needs updating for each new calculation.
         /// </summary>
         /// <param name="afvals">List of values to be summarized</param>
         /// <param name="numberOfStandardDeviations">The cutoff for outliers</param>
