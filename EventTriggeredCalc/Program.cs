@@ -74,7 +74,7 @@ namespace EventTriggeredCalc
 
                 if (string.IsNullOrWhiteSpace(settings.AFServerName))
                 {
-                    // Use the default PI Data Archive
+                    // Use the default AF Server
                     myPISystem = myPISystems.DefaultPISystem;
                 }
                 else
@@ -88,7 +88,7 @@ namespace EventTriggeredCalc
 
                 if (string.IsNullOrWhiteSpace(settings.AFDatabaseName))
                 {
-                    // Use the default PI Data Archive
+                    // Use the default AF database
                     myAFDB = myPISystem.Databases.DefaultDatabase;
                 }
                 else
