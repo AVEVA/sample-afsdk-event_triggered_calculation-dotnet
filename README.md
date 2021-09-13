@@ -74,7 +74,7 @@ The sample is configured using the file [appsettings.placeholder.json](EventTrig
   "AFServerName": "",             // Leave blank to use the machine's default AF Server
   "AFDatabaseName": "",           // Leave blank to use the AF Server's default database
   "UpdateCheckIntervalMS": 5000,  // How often to check the update queue for updates, in ms
-  "Contexts": [                   // Array of element names to run the calculation against
+  "Contexts": [                   // Array of paths to element to run the calculation against
     "Reactor_1001",
     "Reactor_1002"
   ]
