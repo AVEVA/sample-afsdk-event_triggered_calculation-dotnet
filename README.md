@@ -55,7 +55,9 @@ Calculation Logic:
 1. The previous value for the output attribute is read in, and a rate of change is determined
     1. This value is written to the `MolarFlowRate` attribute. This is not cached as this attribute is not an input for the calculation, and therefore the client-side caching is not necessary
 
-## Prerequisites
+## Getting Started
+
+### Prerequisites
 
 - The AF SDK and corresponding minimum version of .NET Framework must be installed on any machine executing this code  
 Note: This sample uses `AF SDK 2.10.9` and `.NET Framework 4.8`. Older versions of the AF SDK may require code changes.
@@ -65,7 +67,7 @@ Note: This sample uses `AF SDK 2.10.9` and `.NET Framework 4.8`. Older versions 
     - Write data to the output tag(s) underlying PI Points
 - Optionally: If the application is creating elements and attributes, the account requires an AF Server mapping to an identity with permissions to perform these actions.
 
-## Getting Started
+### Sample Modification
 
 The sample is configured using the file [appsettings.placeholder.json](EventTriggeredCalc/appsettings.placeholder.json). Before editing, rename this file to `appsettings.json`. This repository's `.gitignore` rules should prevent the file from ever being checked in to any fork or branch.
 
@@ -74,6 +76,7 @@ The sample is configured using the file [appsettings.placeholder.json](EventTrig
   "AFServerName": "",             // Leave blank to use the machine's default AF Server
   "AFDatabaseName": "",           // Leave blank to use the AF Server's default database
   "UpdateCheckIntervalMS": 5000,  // How often to check the update queue for updates, in ms
+  "CacheTimeSpanSeconds": 86400,  // How old the data can be in the AF Data Cache
   "Contexts": [                   // Array of paths to element to run the calculation against
     "Reactor_1001",
     "Reactor_1002"
@@ -88,7 +91,7 @@ The sample uses an implicit connection to the PI Data Archive under the context 
 1. Edit [Program.cs](EventTriggeredCalc/Program.cs) in the following places to customize the sample to your implementation:
     1. Change the logic in `PerformCalculation()`
     1. Change the list of attribute names and trigger attributes in `DetermineListOfIdealGasLawCalculationAttributes()`
-1. Ensure the listed elements exist on the specified AF Server and AF Database
+1. Ensure the listed elements exist on the specified AF Server and AF Database and have the necessary input and output attributes used in the sample's calculation
     1. *Note*: If using the sample's calculation as is, the [UnitTests.cs](EventTriggeredCalcTests/UnitTests.cs) file begins with the creation of Elements, Attributes, and PI Points as necessary to run the sample and can be used as a reference for getting started
 1. Build and run the solution using Visual Studio or using cmd
     ```shell
