@@ -75,8 +75,11 @@ jobs:
         command: 'restore'
         restoreSolution: '**/*.sln'
 
+    - task: VSBuild@1
+      displayName: 'Build solution'
+      inputs: 
+        vsVersion: 16.0
+
     - template: '/miscellaneous/build_templates/binskim.yml@templates'
 
     - template: '/miscellaneous/build_templates/analysis.yml@templates'
-      parameters:
-        language: dotnet
