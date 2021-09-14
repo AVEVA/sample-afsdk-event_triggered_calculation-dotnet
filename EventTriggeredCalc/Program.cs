@@ -20,6 +20,7 @@ namespace EventTriggeredCalc
         private static IDisposable _unsubscriber;
         private static Exception _toThrow;
         private static Timer _aTimer;
+        private static List<string> _triggerList;
 
         /// <summary>
         /// Entry point of the program
@@ -101,7 +102,7 @@ namespace EventTriggeredCalc
 
                 // Determine the list of attributes to add to the data cache. 
                 // This is extracted into a separate function as its calculation specific.
-                var attributeCacheList = DetermineListOfIdealGasLawCalculationAttributes(myAFDB, settings.Contexts);
+                var attributeCacheList = DetermineListOfIdealGasLawCalculationAttributes(myAFDB, settings.Contexts, out _triggerList);
                 #endregion // step2
 
                 #region step3
@@ -207,15 +208,8 @@ namespace EventTriggeredCalc
                 throw new ArgumentNullException(nameof(thisEvent));
             }
 
-            // List of attribute names on which to trigger updates
-            var triggerList = new List<string>
-            {
-                "Temperature",
-                "Pressure",
-            };
-
             // If the attribute is a trigger, perform a new calculation
-            if (triggerList.Contains(thisEvent.Value.Attribute.Name))
+            if (_triggerList.Contains(thisEvent.Value.Attribute.Name))
             {
                 PerformCalculation(thisEvent.Value.Timestamp, (AFElement)thisEvent.Value.Attribute.Element);
             }
@@ -319,8 +313,14 @@ namespace EventTriggeredCalc
         /// <param name="myAFDB">The AF Database the calculation is running against</param>
         /// <param name="elementContexts">The list of element names from the appsettings /param>
         /// <returns>A list of AFAttribute objects to be added to the data cache</returns>
-        private static List<AFAttribute> DetermineListOfIdealGasLawCalculationAttributes(AFDatabase myAFDB, IList<string> elementContexts)
+        private static List<AFAttribute> DetermineListOfIdealGasLawCalculationAttributes(AFDatabase myAFDB, IList<string> elementContexts, out List<string> triggerList)
         {
+            triggerList = new List<string>
+            {
+                "Temperature",
+                "Pressure",
+            };
+
             var attributeCacheList = new List<AFAttribute>();
 
             foreach (var context in elementContexts)

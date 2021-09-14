@@ -87,8 +87,7 @@ The sample uses an implicit connection to the PI Data Archive under the context 
 1. In the EventTriggeredCalc directory, create appsettings.json from [appsettings.placeholder.json](EventTriggeredCalc/appsettings.placeholder.json) and edit the configuration as necessary
 1. Edit [Program.cs](EventTriggeredCalc/Program.cs) in the following places to customize the sample to your implementation:
     1. Change the logic in `PerformCalculation()`
-    1. Change the list of attribute names in `DetermineListOfIdealGasLawCalculationAttributes()`
-    1. Change the list of trigger attributes in `ProcessUpdate()`
+    1. Change the list of attribute names and trigger attributes in `DetermineListOfIdealGasLawCalculationAttributes()`
 1. Ensure the listed elements exist on the specified AF Server and AF Database
     1. *Note*: If using the sample's calculation as is, the [UnitTests.cs](EventTriggeredCalcTests/UnitTests.cs) file begins with the creation of Elements, Attributes, and PI Points as necessary to run the sample and can be used as a reference for getting started
 1. Build and run the solution using Visual Studio or using cmd
