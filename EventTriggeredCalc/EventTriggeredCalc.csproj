@@ -136,9 +136,7 @@
     <None Include="appsettings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="appsettings.placeholder.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
+    <None Include="appsettings.placeholder.json" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
