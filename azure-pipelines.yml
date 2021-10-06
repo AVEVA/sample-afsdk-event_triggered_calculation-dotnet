@@ -37,7 +37,7 @@ jobs:
     steps:
       - template: '/miscellaneous/build_templates/appsettings.yml@templates'
         parameters:
-          secrets: ''
+          secrets: 'AFServerName'
 
       - task: NuGetCommand@2
         displayName: 'nuget restore'
