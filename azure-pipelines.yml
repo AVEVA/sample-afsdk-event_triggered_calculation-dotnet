@@ -36,8 +36,6 @@ jobs:
       demands: COMPUTERNAME -equals $(buildAgent)
     steps:
       - template: '/miscellaneous/build_templates/appsettings.yml@templates'
-        parameters:
-          secrets: 'AFServerName'
 
       - task: NuGetCommand@2
         displayName: 'nuget restore'
