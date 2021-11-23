@@ -62,6 +62,8 @@ jobs:
   - template: '/miscellaneous/build_templates/analysis.yml@templates'
     parameters:
       buildSteps:
+        - template: '/miscellaneous/build_templates/appsettings.yml@templates'
+        
         - task: NuGetCommand@2
           displayName: 'nuget restore'
           inputs:
