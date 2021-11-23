@@ -19,6 +19,10 @@ schedules:
 
 resources:
   repositories:
+    - repository: OpsGuildAutomationRepo
+      type: git
+      name: Engineering/OpsGuild.Automation
+      ref: refs/heads/main
     - repository: templates
       type: github
       name: osisoft/OSI-Samples
@@ -55,23 +59,18 @@ jobs:
           publishTestResults: true
           testRunTitle: '$(Agent.JobName) on $(Agent.OS)'
 
-  - job: Analysis
-    pool:
-      name: 00-OSIManaged-Test
-      demands: COMPUTERNAME -equals $(buildAgent)
+  - template: '/miscellaneous/build_templates/analysis.yml@templates'
+    parameters:
+      buildSteps:
+        - task: NuGetCommand@2
+          displayName: 'nuget restore'
+          inputs:
+            command: 'restore'
+            restoreSolution: '**/*.sln'
 
-    steps:
-    - task: NuGetCommand@2
-      displayName: 'nuget restore'
-      inputs:
-        command: 'restore'
-        restoreSolution: '**/*.sln'
+        - task: VSBuild@1
+          displayName: 'Build solution'
+          inputs: 
+            vsVersion: 16.0
 
-    - task: VSBuild@1
-      displayName: 'Build solution'
-      inputs: 
-        vsVersion: 16.0
-
-    - template: '/miscellaneous/build_templates/binskim.yml@templates'
-
-    - template: '/miscellaneous/build_templates/analysis.yml@templates'
+        - template: '/miscellaneous/build_templates/binskim.yml@templates'
