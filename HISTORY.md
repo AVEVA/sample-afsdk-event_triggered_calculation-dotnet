@@ -1,5 +1,18 @@
 # Version History
 
+## 1.0.4 / 2022-01-12
+
+- Resolved Polaris scan finding
+- Resolved pipeline yaml
+
+## 1.0.3 / 2022-01-12
+
+- Update pipelines to reference internal analysis templates
+
+## 1.0.2 / 2022-01-11
+
+- Updated dependencies
+
 ## 1.0.1 / 2021-10-13
 
 - Update pipelines to use Azure Key Vault for secrets
