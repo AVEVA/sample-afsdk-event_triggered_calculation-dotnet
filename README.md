@@ -1,6 +1,6 @@
 # AF SDK Custom Calculation - Event Triggered
 
-**Version:** 1.0.3
+**Version:** 1.0.2
 
 [![Build Status](https://dev.azure.com/osieng/engineering/_apis/build/status/product-readiness/PI-System/osisoft.sample-afsdk-event_triggered_calculation-dotnet?repoName=osisoft%2Fsample-afsdk-event_triggered_calculation-dotnet&branchName=main)](https://dev.azure.com/osieng/engineering/_build/latest?definitionId=3928&repoName=osisoft%2Fsample-afsdk-event_triggered_calculation-dotnet&branchName=main)
 
