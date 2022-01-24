@@ -2,7 +2,7 @@
 
 **Version:** 1.0.3
 
-[![Build Status](https://dev.azure.com/osieng/engineering/_apis/build/status/product-readiness/PI-System/osisoft.sample-afsdk-event_triggered_calculation-dotnet?repoName=osisoft%2Fsample-afsdk-event_triggered_calculation-dotnet&branchName=main)](https://dev.azure.com/osieng/engineering/_build/latest?definitionId=3928&repoName=osisoft%2Fsample-afsdk-event_triggered_calculation-dotnet&branchName=main)
+[![Build Status](https://dev.azure.com/osieng/engineering/_apis/build/status/product-readiness/PI-System/aveva.sample-afsdk-event_triggered_calculation-dotnet?branchName=main)](https://dev.azure.com/osieng/engineering/_build/latest?definitionId=3928&branchName=main)
 
 Built with:
 - .NET Framework 4.8
@@ -130,4 +130,4 @@ dotnet test
 
 For the main AF SDK Custom Calculations Samples landing page [ReadMe](https://github.com/osisoft/OSI-Samples-PI-System/tree/main/docs/AF-SDK-Custom-Calculations-Docs)  
 For the main PI System Samples landing page [ReadMe](https://github.com/osisoft/OSI-Samples-PI-System)  
-For the main OSIsoft Samples landing page [ReadMe](https://github.com/osisoft/OSI-Samples)
+For the main AVEVA Samples landing page [ReadMe](https://github.com/osisoft/OSI-Samples)
