@@ -31,25 +31,30 @@ namespace EventTriggeredCalc
             var source = new CancellationTokenSource();
             var token = source.Token;
 
-            // Launch the sample's main loop, passing it the cancellation token
-            var success = MainLoop(token);
-
-            // Pause until the user decides to end the loop
-            Console.WriteLine($"Press <ENTER> to end... ");
-            Console.ReadLine();
-            
-            // Cancel the operation and wait until everything is canceled properly
-            source.Cancel();
-            _ = success.Result; 
-            
-            // Dispose of the cancellation token source and exit the program
-            if (source != null)
+            try
             {
-                Console.WriteLine("Disposing cancellation token source...");
-                source.Dispose();
+                // Launch the sample's main loop, passing it the cancellation token
+                var success = MainLoop(token);
+
+                // Pause until the user decides to end the loop
+                Console.WriteLine($"Press <ENTER> to end... ");
+                Console.ReadLine();
+
+                // Cancel the operation and wait until everything is canceled properly
+                source.Cancel();
+                _ = success.Result;
             }
-            
-            Console.WriteLine("Quitting Main...");
+            finally
+            {
+                // Dispose of the cancellation token source and exit the program
+                if (source != null)
+                {
+                    Console.WriteLine("Disposing cancellation token source...");
+                    source.Dispose();
+                }
+
+                Console.WriteLine("Quitting Main...");
+            }
         }
 
         /// <summary>
