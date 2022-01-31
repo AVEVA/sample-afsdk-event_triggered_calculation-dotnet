@@ -1,8 +1,13 @@
 # Version History
 
-## 1.0.4 / 2022-02-02
+## 1.0.5 / 2022-02-02
 
 - Updated dependencies
+
+## 1.0.4 / 2022-01-12
+
+- Resolved Polaris scan finding
+- Resolved pipeline yaml
 
 ## 1.0.3 / 2022-01-12
 
