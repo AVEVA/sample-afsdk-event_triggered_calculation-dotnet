@@ -58,6 +58,7 @@ jobs:
           command: test
           publishTestResults: true
           testRunTitle: '$(Agent.JobName) on $(Agent.OS)'
+          projects: C:\agent\_work\1\s\sample-afsdk-event_triggered_calculation-dotnet\EventTriggeredCalc.sln
 
   - job: Analysis
     pool:
