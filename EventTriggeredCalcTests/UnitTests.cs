@@ -53,7 +53,7 @@ namespace EventTriggeredCalcTests
                     myPISystem = myPISystems[settings.AFServerName];
                 }
                 
-                if (!myPISystem)
+                if (myPISystem is null)
                 {
                     myPISystem = CreatePISystem(settings.AFServerName);
                 }
