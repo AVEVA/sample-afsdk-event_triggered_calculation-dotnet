@@ -39,9 +39,11 @@ jobs:
       name: 00-OSIManaged-Containers
       demands: Agent.OS -equals Windows_NT
     steps:
+      - checkout: self
+      - checkout: OpsGuildPipelineTools
+
       - template: '/miscellaneous/build_templates/appsettings.yml@templates'
       
-      - checkout: OpsGuildPipelineTools
       - template: '/Templates/Utilities/InstallAFSDK.step.v0.yml@OpsGuildPipelineTools'
 
       - task: NuGetCommand@2
