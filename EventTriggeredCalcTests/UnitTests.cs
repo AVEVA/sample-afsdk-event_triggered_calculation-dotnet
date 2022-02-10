@@ -55,7 +55,7 @@ namespace EventTriggeredCalcTests
                 
                 if (myPISystem is null)
                 {
-                    myPISystem = CreatePISystem(settings.AFServerName);
+                    myPISystem = new PISystems().CreatePISystem(settings.AFServerName);
                 }
 
                 Console.WriteLine("Resolving AF Database object...");
