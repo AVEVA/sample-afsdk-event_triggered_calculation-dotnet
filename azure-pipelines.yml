@@ -50,12 +50,11 @@ jobs:
         displayName: 'nuget restore'
         inputs:
           command: 'restore'
-          restoreSolution: '**/EventTriggeredCalc.sln'
+          restoreSolution: '**/*.sln'
 
       - task: VSBuild@1
         displayName: 'Build solution'
         inputs: 
-          solution: '**/EventTriggeredCalc.sln'
           vsVersion: 16.0
         
       - task: DotNetCoreCLI@2
