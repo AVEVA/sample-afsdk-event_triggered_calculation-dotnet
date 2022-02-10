@@ -41,6 +41,7 @@ jobs:
     steps:
       - template: '/miscellaneous/build_templates/appsettings.yml@templates'
       
+      - checkout: OpsGuildPipelineTools
       - template: '/Templates/Utilities/InstallAFSDK.step.v0.yml@OpsGuildPipelineTools'
 
       - task: NuGetCommand@2
