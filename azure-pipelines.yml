@@ -50,11 +50,12 @@ jobs:
         displayName: 'nuget restore'
         inputs:
           command: 'restore'
-          restoreSolution: '**/*.sln'
+          restoreSolution: '**/EventTriggeredCalc.sln'
 
       - task: VSBuild@1
         displayName: 'Build solution'
         inputs: 
+          solution: '**/EventTriggeredCalc.sln'
           vsVersion: 16.0
         
       - task: DotNetCoreCLI@2
@@ -74,11 +75,12 @@ jobs:
       displayName: 'nuget restore'
       inputs:
         command: 'restore'
-        restoreSolution: '**/*.sln'
+        restoreSolution: '**/EventTriggeredCalc.sln'
 
     - task: VSBuild@1
       displayName: 'Build solution'
       inputs: 
+        solution: '**/EventTriggeredCalc.sln'
         vsVersion: 16.0
 
     - template: '/miscellaneous/build_templates/binskim.yml@templates'
