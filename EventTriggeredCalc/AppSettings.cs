@@ -31,5 +31,17 @@ namespace EventTriggeredCalc
         /// The interval that the timer triggers the checking of snapshot updates, in ms
         /// </summary>
         public int UpdateCheckIntervalMS { get; set; }
+
+        /// <summary>
+        /// The username to use when connecting to AF
+        /// An empty string will use the application user
+        /// </summary>
+        public string Username { get; set; }
+
+        /// <summary>
+        /// The password to use when connecting to AF
+        /// An empty string will use the application user
+        /// </summary>
+        public string Password { get; set; }
     }
 }

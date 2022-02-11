@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net;
 using System.Text.Json;
 using System.Threading;
 using EventTriggeredCalc;
@@ -57,6 +58,13 @@ namespace EventTriggeredCalcTests
                 {
                     PISystem.CreatePISystem(settings.AFServerName).Dispose();
                     myPISystem = myPISystems[settings.AFServerName];
+                }
+
+                // Connect using credentials if they exist
+                if (!string.IsNullOrWhiteSpace(settings.Username) && !string.IsNullOrWhiteSpace(settings.Password))
+                {
+                    var credential = new NetworkCredential(settings.Username, settings.Password);
+                    myPISystem.Connect(credential);
                 }
 
                 Console.WriteLine("Resolving AF Database object...");
@@ -231,7 +239,6 @@ namespace EventTriggeredCalcTests
                 }
                 #endregion // step5
 
-                myPISystem.Dispose();
             }
             catch (Exception ex)
             {

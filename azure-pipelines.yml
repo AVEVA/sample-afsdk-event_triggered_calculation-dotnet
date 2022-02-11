@@ -47,7 +47,7 @@ jobs:
 
       - template: '/miscellaneous/build_templates/appsettings.yml@templates'
         parameters:
-          secrets: 'AFServerName, AFDatabaseName1'
+          secrets: 'AFServerName, AFDatabaseName1, Username, Password'
       
       - template: '/Templates/Utilities/InstallAFSDK.step.v0.yml@OpsGuildPipelineTools'
 
