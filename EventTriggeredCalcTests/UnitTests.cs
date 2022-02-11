@@ -55,10 +55,8 @@ namespace EventTriggeredCalcTests
 
                 if (myPISystem is null)
                 {
-                    using (PISystem.CreatePISystem(settings.AFServerName)) 
-                    {
-                        myPISystem = myPISystems[settings.AFServerName];
-                    }
+                    PISystem.CreatePISystem(settings.AFServerName).Dispose();
+                    myPISystem = myPISystems[settings.AFServerName];
                 }
 
                 Console.WriteLine("Resolving AF Database object...");
@@ -232,6 +230,8 @@ namespace EventTriggeredCalcTests
                     }
                 }
                 #endregion // step5
+
+                myPISystem.Dispose();
             }
             catch (Exception ex)
             {
@@ -307,6 +307,7 @@ namespace EventTriggeredCalcTests
                 // Check in the changes
                 myAFDB.CheckIn(AFCheckedOutMode.ObjectsCheckedOutThisSession);
                 #endregion // step6
+
             }
         }
     }
