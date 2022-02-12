@@ -1,5 +1,10 @@
 # Version History
 
+## 1.1.0 / 2022-02-18
+
+- Change of agent used in testing
+- Changes to appsettings json for testing
+
 ## 1.0.5 / 2022-02-02
 
 - Updated dependencies

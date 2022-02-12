@@ -60,7 +60,7 @@ namespace EventTriggeredCalcTests
                     myPISystem = myPISystems[settings.AFServerName];
                 }
 
-                // Connect using credentials if they exist
+                // Connect using credentials if they exist in settings
                 if (!string.IsNullOrWhiteSpace(settings.Username) && !string.IsNullOrWhiteSpace(settings.Password))
                 {
                     var credential = new NetworkCredential(settings.Username, settings.Password);
