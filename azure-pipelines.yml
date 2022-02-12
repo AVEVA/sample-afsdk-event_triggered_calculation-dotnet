@@ -76,6 +76,11 @@ jobs:
       demands: Agent.OS -equals Windows_NT
 
     steps:
+    - checkout: self
+    - checkout: OpsGuildPipelineTools
+      
+    - template: '/Templates/Utilities/InstallAFSDK.step.v0.yml@OpsGuildPipelineTools'
+
     - task: NuGetCommand@2
       displayName: 'nuget restore'
       inputs:
