@@ -81,6 +81,8 @@ jobs:
       
     - template: '/Templates/Utilities/InstallAFSDK.step.v0.yml@OpsGuildPipelineTools'
 
+    - template: '/miscellaneous/build_templates/appsettings.yml@templates'
+
     - task: NuGetCommand@2
       displayName: 'nuget restore'
       inputs:
