@@ -72,7 +72,7 @@ jobs:
           command: test
           publishTestResults: true
           testRunTitle: '$(Agent.JobName) on $(Agent.OS)'
-          projects: C:\agent\_work\1\s\sample-afsdk-event_triggered_calculation-dotnet\EventTriggeredCalc.sln
+          projects: '$(Build.SourcesDirectory)\sample-afsdk-event_triggered_calculation-dotnet\EventTriggeredCalc.sln'
 
   - template: '/miscellaneous/build_templates/code-analysis.yml@templates'
     parameters:
@@ -97,4 +97,5 @@ jobs:
             
         - template: '/miscellaneous/build_templates/binskim.yml@templates'
           parameters:
-            deleteBinSkim: AFSDKInstallKit/*
+            deleteBinSkim: 'AFSDKInstallKit/*'
+            projectPath: '\sample-afsdk-event_triggered_calculation-dotnet'
