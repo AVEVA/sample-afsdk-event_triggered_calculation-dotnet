@@ -45,6 +45,8 @@ jobs:
     variables:
       - name: AFDatabaseName
         value: $(AFDatabaseName1)
+      - name: projectPath
+        value: '\sample-afsdk-event_triggered_calculation-dotnet'
     steps:
       - checkout: self
       - checkout: OpsGuildPipelineTools
@@ -98,4 +100,3 @@ jobs:
         - template: '/miscellaneous/build_templates/binskim.yml@templates'
           parameters:
             deleteBinSkim: 'AFSDKInstallKit/*'
-            projectPath: '\sample-afsdk-event_triggered_calculation-dotnet'
