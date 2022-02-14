@@ -96,5 +96,5 @@ jobs:
             vsVersion: 16.0
             
         - template: '/miscellaneous/build_templates/binskim.yml@templates'
-          inputs:
+          parameters:
             deleteBinSkim: AFSDKInstallKit/*
