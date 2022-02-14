@@ -56,6 +56,7 @@ namespace EventTriggeredCalcTests
 
                 if (myPISystem is null)
                 {
+                    Console.WriteLine("Create entry for AF Server...");
                     PISystem.CreatePISystem(settings.AFServerName).Dispose();
                     myPISystem = myPISystems[settings.AFServerName];
                 }
@@ -63,6 +64,7 @@ namespace EventTriggeredCalcTests
                 // Connect using credentials if they exist in settings
                 if (!string.IsNullOrWhiteSpace(settings.Username) && !string.IsNullOrWhiteSpace(settings.Password))
                 {
+                    Console.WriteLine("Connect to AF Server using provided credentials...");
                     var credential = new NetworkCredential(settings.Username, settings.Password);
                     myPISystem.Connect(credential);
                 }
