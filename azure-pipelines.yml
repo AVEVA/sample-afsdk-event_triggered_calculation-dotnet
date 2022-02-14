@@ -70,30 +70,25 @@ jobs:
           testRunTitle: '$(Agent.JobName) on $(Agent.OS)'
           projects: C:\agent\_work\1\s\sample-afsdk-event_triggered_calculation-dotnet\EventTriggeredCalc.sln
 
-  - job: Analysis
-    pool:
-      name: 00-OSIManaged-Containers
-      demands: Agent.OS -equals Windows_NT
+  - template: '/miscellaneous/build_templates/code-analysis.yml@templates'
+    parameters:
+      buildSteps:
+        - checkout: self
+        - checkout: OpsGuildPipelineTools
 
-    steps:
-    - checkout: self
-    - checkout: OpsGuildPipelineTools
-      
-    - template: '/Templates/Utilities/InstallAFSDK.step.v0.yml@OpsGuildPipelineTools'
+        - template: '/Templates/Utilities/InstallAFSDK.step.v0.yml@OpsGuildPipelineTools'
 
-    - template: '/miscellaneous/build_templates/appsettings.yml@templates'
+        - template: '/miscellaneous/build_templates/appsettings.yml@templates'
 
-    - task: NuGetCommand@2
-      displayName: 'nuget restore'
-      inputs:
-        command: 'restore'
-        restoreSolution: '**/*.sln'
+        - task: NuGetCommand@2
+          displayName: 'nuget restore'
+          inputs:
+            command: 'restore'
+            restoreSolution: '**/*.sln'
 
-    - task: VSBuild@1
-      displayName: 'Build solution'
-      inputs: 
-        vsVersion: 16.0
+        - task: VSBuild@1
+          displayName: 'Build solution'
+          inputs: 
+            vsVersion: 16.0
 
-    - template: '/miscellaneous/build_templates/binskim.yml@templates'
-
-    - template: '/miscellaneous/build_templates/analysis.yml@templates'
+        - template: '/miscellaneous/build_templates/binskim.yml@templates'
