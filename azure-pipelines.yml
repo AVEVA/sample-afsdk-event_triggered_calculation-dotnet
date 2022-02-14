@@ -19,6 +19,10 @@ schedules:
 
 resources:
   repositories:
+    - repository: OpsGuildAutomationRepo
+      type: git
+      name: Engineering/OpsGuild.Automation
+      ref: refs/heads/main
     - repository: OpsGuildPipelineTools
       type: git
       name: Engineering/opsguild.pipeline-tools
