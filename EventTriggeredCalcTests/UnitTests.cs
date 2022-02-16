@@ -240,7 +240,6 @@ namespace EventTriggeredCalcTests
                     }
                 }
                 #endregion // step5
-
             }
             catch (Exception ex)
             {
@@ -315,8 +314,7 @@ namespace EventTriggeredCalcTests
                 
                 // Check in the changes
                 myAFDB.CheckIn(AFCheckedOutMode.ObjectsCheckedOutThisSession);
-                #endregion // step6
-
+                #endregion // step
             }
         }
     }
