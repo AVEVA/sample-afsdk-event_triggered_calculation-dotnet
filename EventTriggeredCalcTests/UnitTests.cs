@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net;
 using System.Text.Json;
 using System.Threading;
 using EventTriggeredCalc;
@@ -51,6 +52,21 @@ namespace EventTriggeredCalcTests
                 else
                 {
                     myPISystem = myPISystems[settings.AFServerName];
+                }
+
+                if (myPISystem is null)
+                {
+                    Console.WriteLine("Create entry for AF Server...");
+                    PISystem.CreatePISystem(settings.AFServerName).Dispose();
+                    myPISystem = myPISystems[settings.AFServerName];
+                }
+
+                // Connect using credentials if they exist in settings
+                if (!string.IsNullOrWhiteSpace(settings.Username) && !string.IsNullOrWhiteSpace(settings.Password))
+                {
+                    Console.WriteLine("Connect to AF Server using provided credentials...");
+                    var credential = new NetworkCredential(settings.Username, settings.Password);
+                    myPISystem.Connect(credential);
                 }
 
                 Console.WriteLine("Resolving AF Database object...");
@@ -298,7 +314,7 @@ namespace EventTriggeredCalcTests
                 
                 // Check in the changes
                 myAFDB.CheckIn(AFCheckedOutMode.ObjectsCheckedOutThisSession);
-                #endregion // step6
+                #endregion // step
             }
         }
     }

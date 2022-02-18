@@ -1,6 +1,6 @@
 # AF SDK Custom Calculation - Event Triggered
 
-**Version:** 1.0.5
+**Version:** 1.1.0
 
 [![Build Status](https://dev.azure.com/osieng/engineering/_apis/build/status/product-readiness/PI-System/aveva.sample-afsdk-event_triggered_calculation-dotnet?branchName=main)](https://dev.azure.com/osieng/engineering/_build/latest?definitionId=3928&branchName=main)
 
@@ -80,7 +80,9 @@ The sample is configured using the file [appsettings.placeholder.json](EventTrig
   "Contexts": [                   // Array of paths to element to run the calculation against
     "Reactor_1001",
     "Reactor_1002"
-  ]
+  ],
+  "Username": "TEST_ONLY",        // Username to connect to the AF Server with for testing purposes only
+  "Password": "TEST_ONLY"         // Password to connect to the AF Server with for testing purposes only
 }
 ```
 
