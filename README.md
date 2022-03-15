@@ -1,6 +1,6 @@
 # AF SDK Custom Calculation - Event Triggered
 
-**Version:** 1.1.0
+**Version:** 1.1.1
 
 [![Build Status](https://dev.azure.com/osieng/engineering/_apis/build/status/product-readiness/PI-System/aveva.sample-afsdk-event_triggered_calculation-dotnet?branchName=main)](https://dev.azure.com/osieng/engineering/_build/latest?definitionId=3928&branchName=main)
 
