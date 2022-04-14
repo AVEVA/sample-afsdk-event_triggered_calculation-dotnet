@@ -1,5 +1,10 @@
 # Version History
 
+## 1.1.2 / 2022-04-14
+
+- Replaced var with explicit types
+- General refactoring according to C# best practices
+
 ## 1.1.1 / 2022-03-15
 
 - Updated dependencies
