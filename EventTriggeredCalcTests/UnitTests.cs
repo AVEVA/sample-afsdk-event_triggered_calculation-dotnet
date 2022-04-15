@@ -216,9 +216,9 @@ namespace EventTriggeredCalcTests
                         Assert.Equal(ExpectedMolesOutput, afValues[i].ValueAsDouble());
 
                         // Check that the timestamp is correct, iterate backwards because the AF SDK call is reversed time order
-                        TimeSpan timeError = timesWrittenTo[TotalExpectedValuesWritten - 1 - i] > afValues[i].Timestamp.LocalTime ? 
-                            timesWrittenTo[TotalExpectedValuesWritten - 1 - i] - afValues[i].Timestamp.LocalTime : 
-                            afValues[i].Timestamp.LocalTime - timesWrittenTo[TotalExpectedValuesWritten - 1 - i];
+                        TimeSpan timeError = timesWrittenTo[TotalExpectedValuesWritten - 1 - i] > afValues[i].Timestamp.LocalTime 
+                            ? timesWrittenTo[TotalExpectedValuesWritten - 1 - i] - afValues[i].Timestamp.LocalTime
+                            : afValues[i].Timestamp.LocalTime - timesWrittenTo[TotalExpectedValuesWritten - 1 - i];
 
                         Assert.True(timeError < errorThreshold, $"Output timestamp was of {afValues[i].Timestamp.LocalTime} was further from " +
                                                                 $"expected value of {timesWrittenTo[TotalExpectedValuesWritten - 1 - i]} by more than acceptable error of {errorThreshold}");
