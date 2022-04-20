@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -28,13 +29,13 @@ namespace EventTriggeredCalc
         public static void Main()
         {
             // Create a cancellation token source in order to cancel the calculation loop on demand
-            var source = new CancellationTokenSource();
-            var token = source.Token;
+            CancellationTokenSource source = new CancellationTokenSource();
+            CancellationToken token = source.Token;
 
             try
             {
                 // Launch the sample's main loop, passing it the cancellation token
-                var success = MainLoop(token);
+                Task<bool> success = MainLoop(token);
 
                 // Pause until the user decides to end the loop
                 Console.WriteLine($"Press <ENTER> to end... ");
@@ -47,11 +48,8 @@ namespace EventTriggeredCalc
             finally
             {
                 // Dispose of the cancellation token source and exit the program
-                if (source != null)
-                {
-                    Console.WriteLine("Disposing cancellation token source...");
-                    source.Dispose();
-                }
+                Console.WriteLine("Disposing cancellation token source...");
+                source.Dispose();
 
                 Console.WriteLine("Quitting Main...");
             }
@@ -74,32 +72,12 @@ namespace EventTriggeredCalc
                 #region step1
                 Console.WriteLine("Resolving AF Server object...");
 
-                var myPISystems = new PISystems();
-                PISystem myPISystem;
-
-                if (string.IsNullOrWhiteSpace(settings.AFServerName))
-                {
-                    // Use the default AF Server
-                    myPISystem = myPISystems.DefaultPISystem;
-                }
-                else
-                {
-                    myPISystem = myPISystems[settings.AFServerName];
-                }
+                PISystems myPISystems = new PISystems();
+                PISystem myPISystem = string.IsNullOrWhiteSpace(settings.AFServerName) ? myPISystems.DefaultPISystem : myPISystems[settings.AFServerName];
 
                 Console.WriteLine("Resolving AF Database object...");
                 
-                AFDatabase myAFDB;
-
-                if (string.IsNullOrWhiteSpace(settings.AFDatabaseName))
-                {
-                    // Use the default AF database
-                    myAFDB = myPISystem.Databases.DefaultDatabase;
-                }
-                else
-                {
-                    myAFDB = myPISystem.Databases[settings.AFDatabaseName];
-                }
+                AFDatabase myAFDB = string.IsNullOrWhiteSpace(settings.AFDatabaseName) ? myPISystem.Databases.DefaultDatabase : myPISystem.Databases[settings.AFDatabaseName];
                 #endregion // step1
 
                 #region step2
@@ -107,7 +85,7 @@ namespace EventTriggeredCalc
 
                 // Determine the list of attributes to add to the data cache. 
                 // This is extracted into a separate function as its calculation specific.
-                var attributeCacheList = DetermineListOfIdealGasLawCalculationAttributes(myAFDB, settings.Contexts, out _triggerList);
+                List<AFAttribute> attributeCacheList = DetermineListOfIdealGasLawCalculationAttributes(myAFDB, settings.Contexts, out _triggerList);
                 #endregion // step2
 
                 #region step3
@@ -239,55 +217,51 @@ namespace EventTriggeredCalc
         private static AFData GetData(AFAttribute attribute)
         {
             // If the attribute is in the cache, return the local cache instance's AFData object
-            if (_myAFDataCache.TryGetItem(attribute, out var data))
-                return data;
-
-            // Otherwise, return the attribute's underlying, non-cached AFData object
-            else
-                return attribute.Data;
+            return _myAFDataCache.TryGetItem(attribute, out AFData data) ? data : attribute.Data;
         }
 
         /// <summary>
         /// This method performs the calculation and writes the value to the output tag
+        /// </summary>
         /// <param name="triggerTime">The timestamp to perform the calculation against</param>
         /// <param name="context">The context on which to perform this calculation</param>
         private static void PerformCalculation(DateTime triggerTime, AFElement context)
         {
             // Configuration
-            var numValues = 100;  // number of values to find the trimmed average of
-            var isForward = false;
-            var tempUom = "K";
-            var pressUom = "torr";
-            var volUom = "L";
-            var molUom = "mol";
-            var molRateUom = "mol/s";
-            var filterExpression = string.Empty;
-            var includeFilteredValues = false;
+            const int NumValues = 100;  // number of values to find the trimmed average of
+            const bool IsForward = false;
+            const string TemperatureUom = "K";
+            const string PressureUom = "torr";
+            const string VolumeUom = "L";
+            const string MolarUom = "mol";
+            const string MolarRateUom = "mol/s";
+            string filterExpression = string.Empty;
+            const bool IncludeFilteredValues = false;
 
-            var numStDevs = 1.75; // number of standard deviations of variance to allow
-            
+            const double NumberOfStandardDeviations = 1.75; // number of standard deviations of variance to allow
+
             // Obtain the recent values from the trigger timestamp
-            var afTempVals = GetData(context.Attributes["Temperature"]).RecordedValuesByCount(triggerTime, numValues, isForward, AFBoundaryType.Interpolated, context.PISystem.UOMDatabase.UOMs[tempUom], filterExpression, includeFilteredValues);
-            var afPressVals = GetData(context.Attributes["Pressure"]).RecordedValuesByCount(triggerTime, numValues, isForward, AFBoundaryType.Interpolated, context.PISystem.UOMDatabase.UOMs[pressUom], filterExpression, includeFilteredValues);
-            var afVolumeVal = GetData(context.Attributes["Volume"]).EndOfStream(context.PISystem.UOMDatabase.UOMs[volUom]);
+            AFValues afTemperatureValues = GetData(context.Attributes["Temperature"]).RecordedValuesByCount(triggerTime, NumValues, IsForward, AFBoundaryType.Interpolated, context.PISystem.UOMDatabase.UOMs[TemperatureUom], filterExpression, IncludeFilteredValues);
+            AFValues afPressureValues = GetData(context.Attributes["Pressure"]).RecordedValuesByCount(triggerTime, NumValues, IsForward, AFBoundaryType.Interpolated, context.PISystem.UOMDatabase.UOMs[PressureUom], filterExpression, IncludeFilteredValues);
+            AFValue afVolumeVal = GetData(context.Attributes["Volume"]).EndOfStream(context.PISystem.UOMDatabase.UOMs[VolumeUom]);
 
             // Remove bad values
-            afTempVals.RemoveAll(afval => !afval.IsGood);
-            afPressVals.RemoveAll(afval => !afval.IsGood);
+            afTemperatureValues.RemoveAll(afValue => !afValue.IsGood);
+            afPressureValues.RemoveAll(afValue => !afValue.IsGood);
 
             // Iteratively solve for the trimmed mean of temperature and pressure
-            var meanTemp = GetTrimmedMean(afTempVals, numStDevs);
-            var meanPressure = GetTrimmedMean(afPressVals, numStDevs);
+            double meanTemp = GetTrimmedMean(afTemperatureValues, NumberOfStandardDeviations);
+            double meanPressure = GetTrimmedMean(afPressureValues, NumberOfStandardDeviations);
 
             // Apply the Ideal Gas Law (PV = nRT) to solve for number of moles
-            var gasConstant = 62.363598221529; // units of  L * Torr / (K * mol)
-            var currentMolarValue = meanPressure * afVolumeVal.ValueAsDouble() / (gasConstant * meanTemp); // PV = nRT; n = PV/(RT)
+            const double GasConstant = 62.363598221529; // units of  L * Torr / (K * mol)
+            double currentMolarValue = meanPressure * afVolumeVal.ValueAsDouble() / (GasConstant * meanTemp); // PV = nRT; n = PV/(RT)
 
             // Before writing to the output attribute, find the previous value to determine rate of change
             AFValue previousMolarValue = null;
             try
             {
-                previousMolarValue = GetData(context.Attributes["Moles"]).RecordedValuesByCount(triggerTime, 1, isForward, AFBoundaryType.Inside, context.PISystem.UOMDatabase.UOMs[molUom], filterExpression, includeFilteredValues)[0];
+                previousMolarValue = GetData(context.Attributes["Moles"]).RecordedValuesByCount(triggerTime, 1, IsForward, AFBoundaryType.Inside, context.PISystem.UOMDatabase.UOMs[MolarUom], filterExpression, IncludeFilteredValues)[0];
             }
             catch
             {
@@ -296,7 +270,7 @@ namespace EventTriggeredCalc
 
             // Write to output attribute's data cache since we want to use this value in the next section
             // Using the cache ensures the value is robustly read back and does not have to travel through the Data Archive and back
-            GetData(context.Attributes["Moles"]).UpdateValue(new AFValue(currentMolarValue, triggerTime, context.PISystem.UOMDatabase.UOMs[molUom]), AFUpdateOption.Insert);
+            GetData(context.Attributes["Moles"]).UpdateValue(new AFValue(currentMolarValue, triggerTime, context.PISystem.UOMDatabase.UOMs[MolarUom]), AFUpdateOption.Insert);
 
             // If there are not yet two values, or one of them was bad, do not calculate the rate
             if (previousMolarValue == null || !previousMolarValue.IsGood)
@@ -307,8 +281,8 @@ namespace EventTriggeredCalc
 
             // Find the rate and write it to the attribute
             // This attribute is not read by this calculation, so writing to the cache is not necessary
-            var molarRateOfChange = (currentMolarValue - previousMolarValue.ValueAsDouble()) / (new AFTimeSpan(new AFTime(triggerTime) - previousMolarValue.Timestamp).Ticks / TimeSpan.TicksPerSecond);
-            context.Attributes["MolarFlowRate"].Data.UpdateValue(new AFValue(molarRateOfChange, triggerTime, context.PISystem.UOMDatabase.UOMs[molRateUom]), AFUpdateOption.Insert);
+            double molarRateOfChange = (currentMolarValue - previousMolarValue.ValueAsDouble()) / (new AFTimeSpan(new AFTime(triggerTime) - previousMolarValue.Timestamp).Ticks / (double)TimeSpan.TicksPerSecond);
+            context.Attributes["MolarFlowRate"].Data.UpdateValue(new AFValue(molarRateOfChange, triggerTime, context.PISystem.UOMDatabase.UOMs[MolarRateUom]), AFUpdateOption.Insert);
         }
 
         /// <summary>
@@ -316,9 +290,10 @@ namespace EventTriggeredCalc
         /// The attributes are hard coded for this calculation, so the logic is abstracted out of the main method. This needs updating for each new calculation.
         /// </summary>
         /// <param name="myAFDB">The AF Database the calculation is running against</param>
-        /// <param name="elementContexts">The list of element names from the appsettings /param>
+        /// <param name="elementContexts">The list of element names from the appsettings</param>
+        /// <param name="triggerList">The output list of attributes whose updates should trigger new calculations</param>
         /// <returns>A list of AFAttribute objects to be added to the data cache</returns>
-        private static List<AFAttribute> DetermineListOfIdealGasLawCalculationAttributes(AFDatabase myAFDB, IList<string> elementContexts, out List<string> triggerList)
+        private static List<AFAttribute> DetermineListOfIdealGasLawCalculationAttributes(AFDatabase myAFDB, IEnumerable<string> elementContexts, out List<string> triggerList)
         {
             triggerList = new List<string>
             {
@@ -326,17 +301,17 @@ namespace EventTriggeredCalc
                 "Pressure",
             };
 
-            var attributeCacheList = new List<AFAttribute>();
+            List<AFAttribute> attributeCacheList = new List<AFAttribute>();
 
-            foreach (var context in elementContexts)
+            foreach (string context in elementContexts)
             {
                 try
                 {
                     // Resolve the element from its name
-                    var thisElement = myAFDB.Elements[context];
+                    AFElement thisElement = myAFDB.Elements[context];
 
                     // Make a list of inputs to ensure a partially failed context resolution doesn't add to the data cache
-                    var thisattributeCacheList = new List<AFAttribute>
+                    List<AFAttribute> thisAttributeCacheList = new List<AFAttribute>
                     {
                         // Resolve each input attribute
                         thisElement.Attributes["Temperature"],
@@ -346,7 +321,7 @@ namespace EventTriggeredCalc
                     };
 
                     // If successful, add to the list of resolved attributes to the data cache list
-                    attributeCacheList.AddRange(thisattributeCacheList);
+                    attributeCacheList.AddRange(thisAttributeCacheList);
                 }
                 catch (Exception ex)
                 {
@@ -361,43 +336,35 @@ namespace EventTriggeredCalc
         /// <summary>
         /// This method finds the mean of a set of AFValues after removing the outliers in an iterative fashion. This needs updating for each new calculation.
         /// </summary>
-        /// <param name="afvals">List of values to be summarized</param>
+        /// <param name="afValues">List of values to be summarized</param>
         /// <param name="numberOfStandardDeviations">The cutoff for outliers</param>
         /// <returns>The mean of the non-outlier values</returns>
-        private static double GetTrimmedMean(AFValues afvals, double numberOfStandardDeviations)
+        private static double GetTrimmedMean(AFValues afValues, double numberOfStandardDeviations)
         {
             while (true)
             {
                 // Don't loop if all values have been removed
-                if (afvals.Count > 0)
+                if (afValues.Count > 0)
                 {
                     // Calculate the mean
-                    var total = 0.0;
-                    foreach (var afval in afvals)
-                    {
-                        total += afval.ValueAsDouble();
-                    }
+                    double total = afValues.Sum(afValue => afValue.ValueAsDouble());
 
-                    var mean = total / afvals.Count;
+                    double mean = total / afValues.Count;
 
                     // Calculate the standard deviation
-                    var totalSquareVariance = 0.0;
-                    foreach (var afval in afvals)
-                    {
-                        totalSquareVariance += Math.Pow(afval.ValueAsDouble() - mean, 2);
-                    }
+                    double totalSquareVariance = afValues.Sum(afValue => Math.Pow(afValue.ValueAsDouble() - mean, 2));
 
-                    var meanSqDev = totalSquareVariance / (double)afvals.Count;
-                    var stdev = Math.Sqrt(meanSqDev);
+                    double meanSqDev = totalSquareVariance / (double)afValues.Count;
+                    double standardDeviation = Math.Sqrt(meanSqDev);
 
                     // Determine the values outside of the boundaries, and remove them
-                    var cutoff = stdev * numberOfStandardDeviations;
-                    var startingCount = afvals.Count;
+                    double cutoff = standardDeviation * numberOfStandardDeviations;
+                    int startingCount = afValues.Count;
 
-                    afvals.RemoveAll(afval => Math.Abs(afval.ValueAsDouble() - mean) > cutoff);
+                    afValues.RemoveAll(afValue => Math.Abs(afValue.ValueAsDouble() - mean) > cutoff);
 
                     // If no items were removed, output the average and break the loop
-                    if (afvals.Count == startingCount)
+                    if (afValues.Count == startingCount)
                     {
                         return mean;
                     }
