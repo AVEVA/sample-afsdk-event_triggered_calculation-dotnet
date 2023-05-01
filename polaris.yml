@@ -8,7 +8,7 @@ project:
   name: ${env.POLARIS_PROJECT_NAME}
   branch: ${scm.git.branch}
   revision:
-    name: ${scm.git.commit(Libraries-Update)}
+    name: ${scm.git.commit}
     date: ${scm.git.commit.date}
 capture:
   coverity:
