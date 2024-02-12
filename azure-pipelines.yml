@@ -25,7 +25,7 @@ resources:
       ref: refs/heads/main
     - repository: OpsGuildPipelineTools
       type: git
-      name: Engineering/opsguild.pipeline-tools
+      name: DevOps/opsguild.pipeline-tools
       ref: refs/heads/main
     - repository: templates
       type: github
