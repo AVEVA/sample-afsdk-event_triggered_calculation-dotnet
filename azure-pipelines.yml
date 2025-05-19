@@ -19,9 +19,9 @@ schedules:
 
 resources:
   repositories:
-    - repository: OpsGuildAutomationRepo
+    - repository: ArchitectureRepo
       type: git
-      name: DevOps/opsguild.automation
+      name: Architecture/Architecture
       ref: refs/heads/main
     - repository: OpsGuildPipelineTools
       type: git
@@ -38,7 +38,7 @@ variables:
 
 parameters:
   - name: pool
-    default: DevOps Managed Containers Build
+    default: DevOps-Managed-Ubt22-Mdp
   - name: containerDemands
     type: object
     default: ['Agent.OS -equals Windows_NT']
